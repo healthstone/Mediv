@@ -39,15 +39,6 @@ if(NOT WIN32)
   )
 endif()
 
-if(UNIX AND NOT NOJEM AND NOT APPLE)
-  set(worldserver_LINK_FLAGS "-pthread -lncurses ${worldserver_LINK_FLAGS}")
-endif()
-
-set_target_properties(worldserver PROPERTIES LINK_FLAGS "${worldserver_LINK_FLAGS}")
-
-find_package(CppKafka REQUIRED)
-find_package(nlohmann_json REQUIRED)
-
 target_link_libraries(worldserver
   PRIVATE
     trinity-core-interface
