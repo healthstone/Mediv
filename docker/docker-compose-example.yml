@@ -1,0 +1,23 @@
+version: "3.9"
+
+services:
+  authserver:
+    image: mediv-authserver
+    container_name: mediv-authserver
+    volumes:
+      - /home/at/git/c++/Mediv/binary/etc:/application/etc
+      - /home/at/git/c++/Mediv/binary/logs:/application/logs:delegated
+    ports:
+      - 3724:3724
+    restart: always
+
+  worldserver:
+    image: mediv-worldserver
+    container_name: mediv-worldserver
+    volumes:
+      - /home/at/git/c++/Mediv/binary/etc:/application/etc
+      - /home/at/git/c++/Mediv/binary/logs:/application/logs:delegated
+      - /home/at/git/c++/Mediv/binary/data:/application/data:ro
+    ports:
+      - 8085:8085
+    restart: always
