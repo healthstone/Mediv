@@ -3,22 +3,33 @@ version: "3.9"
 services:
   authserver:
     image: mediv-authserver
+    hostname: mediv-authserver
     container_name: mediv-authserver
     volumes:
-      - /home/at/git/c++/Mediv/binary/etc:/application/etc
-      - /home/at/git/c++/Mediv/binary/logs:/application/logs:delegated
+      - /opt/medivh/etc:/application/etc
+      - /opt/medivh/logs:/application/logs:delegated
     ports:
       - 3724:3724
     restart: always
+    networks:
+      - wowdb
 
   worldserver:
     image: mediv-worldserver
+    hostname: mediv-worldserver
     container_name: mediv-worldserver
     volumes:
-      - /home/at/git/c++/Mediv/binary/etc:/application/etc
-      - /home/at/git/c++/Mediv/binary/logs:/application/logs:delegated
-      - /home/at/git/c++/Mediv/binary/Crashes:/application/crashes:delegated
-      - /home/at/git/c++/Mediv/binary/data:/application/data:ro
+      - /opt/medivh/etc:/application/etc
+      - /opt/medivh/logs:/application/logs:delegated
+      - /opt/medivh/Crashes:/application/crashes:delegated
+      - /opt/medivh/data:/application/data:ro
     ports:
       - 45666:45666
     restart: always
+    networks:
+      - wowdb
+
+networks:
+  wowdb:
+    name: wowdb
+    driver: bridge
