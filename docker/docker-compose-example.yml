@@ -17,7 +17,8 @@ services:
     volumes:
       - /home/at/git/c++/Mediv/binary/etc:/application/etc
       - /home/at/git/c++/Mediv/binary/logs:/application/logs:delegated
+      - /home/at/git/c++/Mediv/binary/Crashes:/application/crashes:delegated
       - /home/at/git/c++/Mediv/binary/data:/application/data:ro
     ports:
-      - 8085:8085
+      - 45666:45666
     restart: always
