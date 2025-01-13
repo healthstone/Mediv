@@ -1,7 +1,12 @@
-def UUID_DIR  = UUID.randomUUID().toString()
+def UUID_DIR = UUID.randomUUID().toString()
 def url = "https://jenkins.snow1k.com/job/MedivhEmu/${BUILD_NUMBER}/"
 
 pipeline {
+    when {
+        expression {
+            env.BRANCH_NAME == 'main'
+        }
+    }
 
     agent any
 
@@ -45,7 +50,7 @@ pipeline {
 }
 
 def String getEmoj(String status) {
-    switch(status) {
+    switch (status) {
         case 'SUCCESS': return ':smirk:'
         case 'FAILURE': return ':sob:'
         case 'UNSTABLE': return ':thinking:'
