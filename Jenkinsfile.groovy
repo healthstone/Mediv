@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Stop services') {
             steps {
-                sh('set +e docker-compose -f docker/docker-compose.yml down')
+                sh('docker-compose -f docker/docker-compose.yml down')
             }
         }
         stage('Build Core') {
