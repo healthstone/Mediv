@@ -19,6 +19,7 @@ endif()
 if(WITHOUT_GIT)
   set(rev_date "1970-01-01 00:00:00 +0000")
   set(rev_hash "unknown")
+  set(commits_count "unknown")
   set(rev_branch "Archived")
   # No valid git commit date, use today
   string(TIMESTAMP rev_date_fallback "%Y-%m-%d %H:%M:%S" UTC)
@@ -61,6 +62,15 @@ else()
         COMMAND "${GIT_EXECUTABLE}" symbolic-ref -q --short HEAD
         WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
         OUTPUT_VARIABLE rev_branch
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+        ERROR_QUIET
+      )
+
+      # Also retrieve commit number
+      execute_process(
+        COMMAND "${GIT_EXECUTABLE}" rev-list --count --all
+        WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+        OUTPUT_VARIABLE commits_count
         OUTPUT_STRIP_TRAILING_WHITESPACE
         ERROR_QUIET
       )
