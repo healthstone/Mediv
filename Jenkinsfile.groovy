@@ -6,9 +6,29 @@ pipeline {
     agent any
 
     stages {
-        stage('Build') {
+        stage('Stop services') {
             steps {
-                echo 'Hello World2'
+                sh('set +e docker-compose -f docker/docker-compose.yml down')
+            }
+        }
+        stage('Build Core') {
+            steps {
+                sh('docker build -f docker/core/Dockerfile --no-cache --progress=plain -t mediv-core .')
+            }
+        }
+        stage('Build authserver') {
+            steps {
+                sh('docker build -f docker/authserver/Dockerfile --no-cache --progress=plain -t mediv-authserver .')
+            }
+        }
+        stage('Build worldserver') {
+            steps {
+                sh('docker build -f docker/worldserver/Dockerfile --no-cache --progress=plain -t mediv-worldserver .')
+            }
+        }
+        stage('Start services') {
+            steps {
+                sh('docker-compose -f docker/docker-compose.yml up -d')
             }
         }
     }
