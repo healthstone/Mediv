@@ -31,5 +31,6 @@ services:
 
 networks:
   wowdb:
+    external: true
     name: wowdb
     driver: bridge
