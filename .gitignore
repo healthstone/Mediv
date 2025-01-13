@@ -1,6 +1,7 @@
 
 build*/
 binary*/
+binary/docker-compose.yml
 .directory
 .mailmap
 *.orig
