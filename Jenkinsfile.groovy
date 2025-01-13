@@ -2,36 +2,55 @@ def UUID_DIR = UUID.randomUUID().toString()
 def url = "https://jenkins.snow1k.com/job/MedivhEmu/${BUILD_NUMBER}/"
 
 pipeline {
-    when {
-        expression {
-            env.BRANCH_NAME == 'main'
-        }
-    }
-
     agent any
 
     stages {
         stage('Stop services') {
+            when {
+                expression {
+                    env.BRANCH_NAME == 'main'
+                }
+            }
             steps {
                 sh('set +e docker-compose -f docker/docker-compose.yml down')
             }
         }
         stage('Build Core') {
+            when {
+                expression {
+                    env.BRANCH_NAME == 'main'
+                }
+            }
             steps {
                 sh('docker build -f docker/core/Dockerfile --no-cache --progress=plain -t mediv-core .')
             }
         }
         stage('Build authserver') {
+            when {
+                expression {
+                    env.BRANCH_NAME == 'main'
+                }
+            }
             steps {
                 sh('docker build -f docker/authserver/Dockerfile --no-cache --progress=plain -t mediv-authserver .')
             }
         }
         stage('Build worldserver') {
+            when {
+                expression {
+                    env.BRANCH_NAME == 'main'
+                }
+            }
             steps {
                 sh('docker build -f docker/worldserver/Dockerfile --no-cache --progress=plain -t mediv-worldserver .')
             }
         }
         stage('Start services') {
+            when {
+                expression {
+                    env.BRANCH_NAME == 'main'
+                }
+            }
             steps {
                 sh('docker-compose -f docker/docker-compose.yml up -d')
             }
