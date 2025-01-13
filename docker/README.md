@@ -2,6 +2,9 @@
 
 ## Prepare source
 COPY ``docker/docker-compose-example.yml`` to ``docker/docker-compose.yml`` and change on your volumes and etc.
+
+> cp docker/docker-compose-example.yml docker/docker-compose.yml
+
 ## Commands:
 
 ### Compilation fresh version
