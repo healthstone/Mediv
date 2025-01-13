@@ -18,3 +18,6 @@ COPY ``docker/docker-compose-example.yml`` to ``docker/docker-compose.yml`` and 
 
 ### Run services
 > docker-compose -f docker/docker-compose.yml up -d
+
+### Stop services
+> docker-compose -f docker/docker-compose.yml down
