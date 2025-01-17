@@ -455,9 +455,9 @@ bool Anticheat::checkMovementInfo(MovementInfo const& movementInfo, bool jump)
             }
         }
 
-        uint32 oldstime = getLastMoveServerTimestamp();
-        uint32 stime = GameTime::GetGameTimeMS();
-        uint32 ping;
+//        uint32 oldstime = getLastMoveServerTimestamp();
+//        uint32 stime = GameTime::GetGameTimeMS();
+//        uint32 ping;
         ptime = movementInfo.time;
 
         if (!vehicle)
@@ -502,7 +502,7 @@ bool Anticheat::checkMovementInfo(MovementInfo const& movementInfo, bool jump)
         if (distance < normaldistance)
             return true;
 
-        ping = uint32(diffPacketdelay * 10000.f);
+//        ping = uint32(diffPacketdelay * 10000.f);
 
 //        TC_LOG_INFO("anticheat", "Unit::CheckMovementInfo :  SpeedHack Detected for Account id : {}, Player {}", pPlayer->GetSession()->GetAccountId(), pPlayer->GetName());
 //        TC_LOG_INFO("anticheat", "Unit::========================================================");
