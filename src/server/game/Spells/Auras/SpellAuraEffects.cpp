@@ -16,6 +16,8 @@
  */
 
 #include "SpellAuraEffects.h"
+#include "AditionalData.h"
+#include "Anticheat.h"
 #include "Battlefield.h"
 #include "BattlefieldMgr.h"
 #include "Battleground.h"
@@ -1465,6 +1467,9 @@ void AuraEffect::HandleModStealth(AuraApplication const* aurApp, uint8 mode, boo
 
     Unit* target = aurApp->GetTarget();
     StealthType type = StealthType(GetMiscValue());
+    bool vanishspell = false;
+    if (GetSpellInfo()->IsVanishOrShadowMeld())
+        vanishspell = true;
 
     if (apply)
     {
@@ -1474,6 +1479,10 @@ void AuraEffect::HandleModStealth(AuraApplication const* aurApp, uint8 mode, boo
         target->SetVisFlag(UNIT_VIS_FLAGS_CREEP);
         if (target->GetTypeId() == TYPEID_PLAYER)
             target->SetByteFlag(PLAYER_FIELD_BYTES2, PLAYER_FIELD_BYTES_2_OFFSET_AURA_VISION, PLAYER_FIELD_BYTE2_STEALTH);
+
+        if (vanishspell)
+            if (target && target->ToPlayer())
+                target->ToPlayer()->GetAditionalData()->setVanishTimer();
     }
     else
     {
@@ -2188,6 +2197,11 @@ void AuraEffect::HandleFeignDeath(AuraApplication const* aurApp, uint8 mode, boo
         return;
 
     Unit* target = aurApp->GetTarget();
+    if (Player* targetPlayer = target->ToPlayer())
+    {
+        targetPlayer->GetAnticheat()->setUnderACKmount();
+        targetPlayer->GetAnticheat()->setSkipOnePacketForASH(true);
+    }
 
     if (apply)
     {
@@ -2677,6 +2691,8 @@ void AuraEffect::HandleAuraWaterWalk(AuraApplication const* aurApp, uint8 mode, 
         return;
 
     Unit* target = aurApp->GetTarget();
+    if (Player* targetPlayer = target->ToPlayer())
+        targetPlayer->GetAnticheat()->setUnderACKmount();
 
     if (!apply)
     {
@@ -2694,6 +2710,8 @@ void AuraEffect::HandleAuraFeatherFall(AuraApplication const* aurApp, uint8 mode
         return;
 
     Unit* target = aurApp->GetTarget();
+    if (Player* targetPlayer = target->ToPlayer())
+        targetPlayer->GetAnticheat()->setUnderACKmount();
 
     if (!apply)
     {
@@ -2706,7 +2724,7 @@ void AuraEffect::HandleAuraFeatherFall(AuraApplication const* aurApp, uint8 mode
 
     // start fall from current height
     if (!apply && target->GetTypeId() == TYPEID_PLAYER)
-        target->ToPlayer()->SetFallInformation(0, target->GetPositionZ());
+        target->ToPlayer()->GetAnticheat()->resetFallingData(target->GetPositionZ());
 }
 
 void AuraEffect::HandleAuraHover(AuraApplication const* aurApp, uint8 mode, bool apply) const
@@ -2715,6 +2733,8 @@ void AuraEffect::HandleAuraHover(AuraApplication const* aurApp, uint8 mode, bool
         return;
 
     Unit* target = aurApp->GetTarget();
+    if (Player* targetPlayer = target->ToPlayer())
+        targetPlayer->GetAnticheat()->setUnderACKmount();
 
     if (!apply)
     {

@@ -16,6 +16,7 @@
  */
 
 #include "Spell.h"
+#include "AditionalData.h"
 #include "Battlefield.h"
 #include "BattlefieldMgr.h"
 #include "Battleground.h"
@@ -2192,7 +2193,17 @@ void Spell::AddUnitTarget(Unit* target, uint32 effectMask, bool checkIfValid /*=
             m_delayMoment = targetInfo.TimeDelay;
     }
     else
-        targetInfo.TimeDelay = 0ULL;
+    {
+        // set CC Delay = 0 if target is rogue under vanish
+        if (m_spellInfo->HasAttribute(SPELL_ATTR0_CU_AURA_CC) && target && target->ToPlayer() && target->ToPlayer()->GetAditionalData()->underVisibleVanish())
+            targetInfo.TimeDelay = 0ULL;
+        else
+        {
+            targetInfo.TimeDelay = GetCCDelay(m_spellInfo, m_caster);
+            if (m_delayMoment == 0 || m_delayMoment > targetInfo.TimeDelay)
+                m_delayMoment = targetInfo.TimeDelay;
+        }
+    }
 
     // If target reflect spell back to caster
     if (targetInfo.MissCondition == SPELL_MISS_REFLECT)
@@ -2764,7 +2775,42 @@ SpellMissInfo Spell::PreprocessSpellHit(Unit* unit, bool scaleAura, TargetInfo& 
             return SPELL_MISS_EVADE;
 
         if (m_caster->IsValidAttackTarget(unit, m_spellInfo))
+        {
             unit->RemoveAurasWithInterruptFlags(AURA_INTERRUPT_FLAG_HITBYSPELL);
+
+            // Target should evade spells under VFD
+            if (Player* playerTarget = unit->ToPlayer())
+            {
+                if (playerTarget->GetAditionalData()->underVisibleVanish())
+                {
+                    if (m_spellInfo->IsAutoRepeatRangedSpell())
+                    {
+                        if (Player* playerOwner = m_caster->GetCharmerOrOwnerPlayerOrPlayerItself())
+                            playerOwner->InterruptSpell(CURRENT_AUTOREPEAT_SPELL, true, true);
+                    }
+
+                    if (!m_spellInfo->HasAttribute(SPELL_ATTR0_CU_AURA_CC))
+                        return SPELL_MISS_EVADE;
+                    else if (playerTarget->GetAditionalData()->underBreakbleVanish())
+                    {
+                        playerTarget->RemoveAurasByType(SPELL_AURA_MOD_STEALTH);
+                        playerTarget->RemoveAurasByType(SPELL_AURA_MOD_SHAPESHIFT);
+                        playerTarget->GetAditionalData()->stopVanish();
+                        return SPELL_MISS_EVADE;
+                    }
+                }
+            }
+
+            if (unit->IsTotem() && unit->IsMagnet())
+            {
+                bool AttributeForMagnet = m_spellInfo->HasAttribute(SPELL_ATTR1_PREVENTS_ANIM) || m_spellInfo->HasAttribute(SPELL_ATTR0_NOT_SHAPESHIFT);
+                if (AttributeForMagnet || m_damage > 0)
+                {
+                    unit->KillSelf();
+                    return SPELL_MISS_IMMUNE;
+                }
+            }
+        }
         else if (m_caster->IsFriendlyTo(unit))
         {
             // for delayed spells ignore negative spells (after duel end) for friendly targets
@@ -3496,7 +3542,7 @@ void Spell::_cast(bool skipCheck)
             creatureCaster->ReleaseSpellFocus(this);
 
     // Okay, everything is prepared. Now we need to distinguish between immediate and evented delayed spells
-    if (m_spellInfo->Speed > 0.0f && !m_spellInfo->IsChanneled())
+    if ((m_spellInfo->Speed > 0.0f || GetCCDelay(m_spellInfo, m_caster) > 0) && !m_spellInfo->IsChanneled())
     {
         // Remove used for cast item if need (it can be already NULL after TakeReagents call
         // in case delayed spell remove item at cast delay start
@@ -3582,6 +3628,53 @@ void Spell::DoProcessTargetContainer(Container& targetContainer)
 
     for (TargetInfoBase& target : targetContainer)
         target.DoDamageAndTriggers(this);
+}
+
+uint32 Spell::GetCCDelay(SpellInfo const* _spell, WorldObject* _caster)
+{
+    if (!_spell->HasAttribute(SPELL_ATTR0_CU_AURA_CC))
+        return 0;
+
+    if (_caster->ToGameObject())
+        return 0;
+
+    // CCD for spell with auras
+    AuraType auraWithCCD[] = {
+            SPELL_AURA_MOD_STUN,
+            SPELL_AURA_MOD_CONFUSE,
+            SPELL_AURA_MOD_FEAR,
+            SPELL_AURA_MOD_SILENCE,
+            SPELL_AURA_MOD_DISARM,
+            SPELL_AURA_MOD_POSSESS
+    };
+
+    uint32 delayForStuns = urand(130, 225);
+    uint32 delayForFears = urand(100, 225);
+    uint32 NOdelayForInstantSpells = 0;
+
+    for (uint8 i = 0; i < sizeof(auraWithCCD); ++i)
+        if (_spell->HasAura(auraWithCCD[i]))
+        {
+            switch (i)
+            {
+                case 0:
+                    return delayForStuns;
+                    break;
+                case 1:
+                case 2:
+                    return delayForFears;
+                    break;
+                case 3:
+                case 4:
+                    return NOdelayForInstantSpells;
+                    break;
+                case 5:
+                    return delayForFears;
+                    break;
+            }
+        }
+
+    return 0;
 }
 
 void Spell::handle_immediate()

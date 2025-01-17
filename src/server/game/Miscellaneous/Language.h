@@ -1243,6 +1243,37 @@ enum TrinityStrings
     LANG_SHUTDOWN_CANCELLED                       = 11018,
     LANG_YOU_CHANGE_POWER                         = 11019, // master branch ONLY
     LANG_YOUR_POWER_CHANGED                       = 11020, // master branch ONLY
-    LANG_INVALID_POWER_NAME                       = 11021  // master branch ONLY
+    LANG_INVALID_POWER_NAME                       = 11021,  // master branch ONLY
+
+    // CUSTOM STRINGS
+    // FLAB
+    LANG_FIRST_LOGIN_ACC_MONEY_BONUS_ANNOUNCE     = 12102,
+    // Anticheat
+    LANG_GM_ANNOUNCE_ASH                  = 12120,  // AntiSpeedHack
+    LANG_GM_ANNOUNCE_AFH_CANFLYWRONG      = 12121,  // AntiFlyHack - flying without canfly
+    LANG_GM_ANNOUNCE_AFK_SWIMMING         = 12122,  // AntiFlyHack - flying swimming not in water
+    LANG_GM_ANNOUNCE_AFH                  = 12123,  // AntiFlyHack
+    LANG_GM_ANNOUNCE_DOUBLE_JUMP          = 12124,  // Double jump (client can't sent second packet of jump (only hack))
+    LANG_GM_ANNOUNCE_JUMPER_FAKE          = 12125,  // Gagarin and others can set falling flag and move up as jump
+    LANG_GM_ANNOUNCE_JUMPER_FLYING        = 12126,  // Hitchhiker's Hack and others can set fly unrestricted flag
+    LANG_GM_ANNOUNCE_WALLCLIMB            = 12127,  // Wallclimb
+    LANG_GM_ANNOUNCE_MOVE_UNDER_CONTROL   = 12128,  // Movement under Controll (not restricted)
+    LANG_GM_ANNOUNCE_NOFALLINGDMG         = 12129,  // Falling without opcode of land/swim (not restricted)
+
+    // Vip Commands
+    LANG_PLAYER_NOT_VIP                   = 12170,
+    LANG_VIP_COMMAND_DISABLED             = 12171,
+    LANG_VIP_ERROR                        = 12172,
+    LANG_VIP_BG                           = 12173,
+    LANG_VIP_STEALTH                      = 12174,
+    LANG_VIP_DEAD                         = 12175,
+    LANG_VIP_CHANGE_RACE                  = 12176,
+    LANG_VIP_CHANGE_CUSTOMIZE             = 12177,
+    LANG_VIP_GROUP                        = 12178,
+    LANG_PLAYER_TARGET_NOT_VIP            = 12179,
+    LANG_PLAYER_VIP_TIME_EXIST            = 12180,
+    LANG_PLAYER_VIP_TIME_NEAR_END         = 12181,
+    LANG_PLAYER_VIP_TIME_EXPIRED          = 12182,
+    LANG_TARGETPLAYER_VIP_TIME_EXIST      = 12183,
 };
 #endif

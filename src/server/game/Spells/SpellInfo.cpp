@@ -1109,6 +1109,30 @@ bool SpellInfo::IsSelfCast() const
     return true;
 }
 
+bool SpellInfo::IsVanish() const
+{
+    return HasAttribute(SPELL_ATTR2_UNK1)
+           && HasAttribute(SPELL_ATTR0_NOT_SHAPESHIFT)
+           && HasAttribute(SPELL_ATTR0_DONT_AFFECT_SHEATH_STATE)
+           && HasAttribute(SPELL_ATTR0_DISABLED_WHILE_ACTIVE)
+           && HasAttribute(SPELL_ATTR1_NOT_BREAK_STEALTH);
+}
+
+bool SpellInfo::IsShadowMeld() const
+{
+    return HasAttribute(SPELL_ATTR0_ABILITY)
+           && HasAttribute(SPELL_ATTR0_NOT_SHAPESHIFT)
+           && HasAttribute(SPELL_ATTR0_DONT_AFFECT_SHEATH_STATE)
+           && HasAttribute(SPELL_ATTR0_STOP_ATTACK_TARGET)
+           && HasAttribute(SPELL_ATTR1_UNK4)
+           && HasAttribute(SPELL_ATTR1_NO_THREAT)
+           && HasAttribute(SPELL_ATTR1_UNAUTOCASTABLE_BY_PET)
+           && HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS)
+           && HasAttribute(SPELL_ATTR2_NOT_NEED_SHAPESHIFT)
+           && HasAttribute(SPELL_ATTR2_FAIL_ON_ALL_TARGETS_IMMUNE)
+           && HasAttribute(SPELL_ATTR3_CAN_PROC_WITH_TRIGGERED);
+}
+
 bool SpellInfo::IsPassive() const
 {
     return HasAttribute(SPELL_ATTR0_PASSIVE);
