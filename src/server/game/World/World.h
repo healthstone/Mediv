@@ -474,6 +474,64 @@ enum Rates
     MAX_RATES
 };
 
+enum CustomWorldBoolConfigs
+{
+    CONFIG_ANTICHEAT_FAKEJUMPER_ENABLED = 0,
+    CONFIG_ANTICHEAT_FAKEFLYINGMODE_ENABLED,
+    CONFIG_ANTICHEAT_DOUBLEJUMP_ENABLED,
+    CONFIG_ANTICHEAT_FLYHACK_ENABLED,
+    CONFIG_ANTICHEAT_SPEEDHACK_ENABLED,
+    CONFIG_ANTICHEAT_IGNORE_CONTROL_MOVEMENT_ENABLED,
+    CONFIG_ASH_KICK_ENABLED,
+    CONFIG_AFH_KICK_ENABLED,
+    CONFIG_FAKEJUMPER_KICK_ENABLED,
+    CONFIG_FAKEFLYINGMODE_KICK_ENABLED,
+    CONFIG_ANTICHEAT_NOFALLINGDMG_KICK_ENABLED,
+    CONFIG_CHECK_M2_LOS,
+    CONFIG_PLAYER_FIRST_LOGIN_ACC_BONUS_ENABLED,
+    CONFIG_VIP_DEBUFF,
+    CONFIG_VIP_BANK,
+    CONFIG_VIP_MAIL,
+    CONFIG_VIP_REPAIR,
+    CONFIG_VIP_RESET_TALENTS,
+    CONFIG_VIP_TAXI,
+    CONFIG_VIP_HOME,
+    CONFIG_VIP_CHANGE_RACE,
+    CONFIG_VIP_CUSTOMIZE,
+    CONFIG_VIP_CAPITAL,
+    CONFIG_VIP_APPEAR,
+    CONFIG_PLAYER_BONUS_BAGS_ENABLED,
+    CONFIG_PLAYER_AUTO_LEARN_ENABLED,
+    CUSTOM_BOOL_CONFIG_VALUE_COUNT
+};
+
+enum CustomWorldFloatConfigs
+{
+    CUSTOM_FLOAT_TEST = 0,
+    CUSTOM_FLOAT_CONFIG_VALUE_COUNT
+};
+
+enum CustomWorldIntConfigs
+{
+    CONFIG_ANTICHEAT_FLYHACK_TIMER = 0,
+    CONFIG_ANTISPAM_MAIL_COUNT_CONTROLLER,
+    CONFIG_VANISH_VISION_TIMER,
+    CONFIG_VANISH_CC_BREAK_TIMER,
+    CONFIG_MAX_CHARS_FOR_FIRST_LOGIN_ACC_BONUS,
+    CONFIG_BONUS_MONEY_FOR_FIRST_LOGIN_ACC_BONUS,
+    CONFIG_CREATECHAR_BONUS_BAGS_ID,
+    CUSTOM_INT_CONFIG_VALUE_COUNT
+};
+
+enum CustomRates
+{
+    RATE_VIP_XP_KILL = 0,
+    RATE_VIP_XP_QUEST,
+    RATE_VIP_HONOR,
+    RATE_VIP_REPUTATION,
+    CUSTOM_RATE_CONFIG_VALUE_COUNT
+};
+
 /// Can be used in SMSG_AUTH_RESPONSE packet
 enum BillingPlanFlags
 {
@@ -714,6 +772,79 @@ class TC_GAME_API World
             return index < INT_CONFIG_VALUE_COUNT ? m_int_configs[index] : 0;
         }
 
+        /// Set a server rate (see #CustomRates)
+        bool customSetRate(CustomRates rate, float const& value)
+        {
+            bool result = false;
+            if (rate < CUSTOM_RATE_CONFIG_VALUE_COUNT)
+            {
+                custom_rate_values[rate] = value;
+                result = true;
+            }
+
+            return result;
+        }
+
+        /// Get a server rate (see #CustomRates)
+        float customGetRate(CustomRates rate) const { return custom_rate_values[rate]; }
+
+        /// Set a server configuration element (see #CustomWorldConfigs)
+        bool customSetBoolConfig(CustomWorldBoolConfigs index, bool const& value)
+        {
+            bool result = false;
+            if (index < CUSTOM_BOOL_CONFIG_VALUE_COUNT)
+            {
+                custom_bool_configs[index] = value;
+                result = true;
+            }
+
+            return result;
+        }
+
+        /// Get a server configuration element (see #CustomWorldConfigs)
+        bool customGetBoolConfig(CustomWorldBoolConfigs index) const
+        {
+            return index < CUSTOM_BOOL_CONFIG_VALUE_COUNT ? custom_bool_configs[index] : 0;
+        }
+
+        /// Set a server configuration element (see #CustomWorldConfigs)
+        bool customSetFloatConfig(CustomWorldFloatConfigs index, float const& value)
+        {
+            bool result = false;
+            if (index < CUSTOM_FLOAT_CONFIG_VALUE_COUNT)
+            {
+                custom_float_configs[index] = value;
+                result = true;
+            }
+
+            return result;
+        }
+
+        /// Get a server configuration element (see #CustomWorldConfigs)
+        float customGetFloatConfig(CustomWorldFloatConfigs index) const
+        {
+            return index < CUSTOM_FLOAT_CONFIG_VALUE_COUNT ? custom_float_configs[index] : 0;
+        }
+
+        /// Set a server configuration element (see #CustomWorldConfigs)
+        bool customSetIntConfig(CustomWorldIntConfigs index, uint32 const& value)
+        {
+            bool result = false;
+            if (index < CUSTOM_INT_CONFIG_VALUE_COUNT)
+            {
+                custom_int_configs[index] = value;
+                result = true;
+            }
+
+            return result;
+        }
+
+        /// Get a server configuration element (see #WorldConfigs)
+        uint32 customGetIntConfig(CustomWorldIntConfigs index) const
+        {
+            return index < CUSTOM_INT_CONFIG_VALUE_COUNT ? custom_int_configs[index] : 0;
+        }
+
         void setWorldState(uint32 index, uint64 value);
         uint64 getWorldState(uint32 index) const;
         void LoadWorldStates();
@@ -770,6 +901,9 @@ class TC_GAME_API World
         bool IsGuidWarning() { return _guidWarn; }
         bool IsGuidAlert() { return _guidAlert; }
 
+        void SetAreaIdExcludes(const std::string& areaIdExcludes);
+        bool isAreaIdDisabledForAC(uint32 areaId) const { return _areaIdExcludes.count(areaId); }
+
     protected:
         void _UpdateGameTime();
 
@@ -819,6 +953,12 @@ class TC_GAME_API World
         uint32 m_int_configs[INT_CONFIG_VALUE_COUNT];
         bool m_bool_configs[BOOL_CONFIG_VALUE_COUNT];
         float m_float_configs[FLOAT_CONFIG_VALUE_COUNT];
+
+        float custom_rate_values[CUSTOM_RATE_CONFIG_VALUE_COUNT];
+        uint32 custom_int_configs[CUSTOM_INT_CONFIG_VALUE_COUNT];
+        bool custom_bool_configs[CUSTOM_BOOL_CONFIG_VALUE_COUNT];
+        float custom_float_configs[CUSTOM_FLOAT_CONFIG_VALUE_COUNT];
+
         typedef std::map<uint32, uint64> WorldStatesMap;
         WorldStatesMap m_worldstates;
         uint32 m_playerLimit;
@@ -883,6 +1023,8 @@ class TC_GAME_API World
         bool _guidAlert;
         uint32 _warnDiff;
         time_t _warnShutdownTime;
+
+        std::unordered_set<uint32> _areaIdExcludes;
 
     friend class debug_commandscript;
 };

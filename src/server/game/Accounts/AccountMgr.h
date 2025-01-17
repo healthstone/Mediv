@@ -67,11 +67,21 @@ class TC_GAME_API AccountMgr
         static bool CheckEmail(uint32 accountId, std::string newEmail);
 
         static uint32 GetId(std::string_view username);
+        static uint32 GetCoins(uint32 accountId);
+        static uint32 GetGuidOfOnlineCharacter(uint32 accountId);
+        static time_t GetVIPunsetDate(uint32 accountId);
         static uint32 GetSecurity(uint32 accountId, int32 realmId);
         [[nodiscard]] static QueryCallback GetSecurityAsync(uint32 accountId, int32 realmId, std::function<void(uint32)> callback);
         static bool GetName(uint32 accountId, std::string& name);
         static bool GetEmail(uint32 accountId, std::string& email);
+        static bool GetVipStatus(uint32 accountId);
+        static void SetVipStatus(uint32 accountId, time_t unsetdate);
+        static void SetCoins(uint32 accountId, uint32 coins);
+        static void RemoveVipStatus(uint32 accountId);
+        static void UpdateVipStatus(uint32 accountId, time_t unsetdate);
         static uint32 GetCharactersCount(uint32 accountId);
+
+        static void RecordAntiCheatLog(uint32 accountId, std::string const& name, std::string const& description, std::string const& position, uint32 realmid);
 
         static bool IsBannedAccount(std::string const& name);
         static bool IsPlayerAccount(uint32 gmlevel);

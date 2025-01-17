@@ -39,6 +39,7 @@
 #include "CreatureAIRegistry.h"
 #include "CreatureGroups.h"
 #include "CreatureTextMgr.h"
+#include "CustomWorldConfigMgr.h"
 #include "DatabaseEnv.h"
 #include "DisableMgr.h"
 #include "GameEventMgr.h"
@@ -141,6 +142,11 @@ World::World()
     memset(m_bool_configs, 0, sizeof(m_bool_configs));
     memset(m_float_configs, 0, sizeof(m_float_configs));
 
+    memset(custom_rate_values, 0, sizeof(custom_rate_values));
+    memset(custom_int_configs, 0, sizeof(custom_int_configs));
+    memset(custom_bool_configs, 0, sizeof(custom_bool_configs));
+    memset(custom_float_configs, 0, sizeof(custom_float_configs));
+
     _guidWarn = false;
     _guidAlert = false;
     _warnDiff = 0;
@@ -161,6 +167,24 @@ World::~World()
     CliCommandHolder* command = nullptr;
     while (cliCmdQueue.next(command))
         delete command;
+
+    for (uint32 i = 0; i < MAX_RATES; i++)
+        rate_values[i] = 0;
+    for (uint32 i = 0; i < INT_CONFIG_VALUE_COUNT; i++)
+        m_int_configs[i] = 0;
+    for (uint32 i = 0; i < BOOL_CONFIG_VALUE_COUNT; i++)
+        m_bool_configs[i] = 0;
+    for (uint32 i = 0; i < FLOAT_CONFIG_VALUE_COUNT; i++)
+        m_float_configs[i] = 0;
+
+    for (uint32 i = 0; i < CUSTOM_RATE_CONFIG_VALUE_COUNT; i++)
+        custom_rate_values[i] = 0;
+    for (uint32 i = 0; i < CUSTOM_INT_CONFIG_VALUE_COUNT; i++)
+        custom_int_configs[i] = 0;
+    for (uint32 i = 0; i < CUSTOM_BOOL_CONFIG_VALUE_COUNT; i++)
+        custom_bool_configs[i] = 0;
+    for (uint32 i = 0; i < CUSTOM_FLOAT_CONFIG_VALUE_COUNT; i++)
+        custom_float_configs[i] = 0;
 
     VMAP::VMapFactory::clear();
     MMAP::MMapFactory::clear();
@@ -1558,6 +1582,10 @@ void World::LoadConfigSettings(bool reload)
     // Specifies if IP addresses can be logged to the database
     m_bool_configs[CONFIG_ALLOW_LOGGING_IP_ADDRESSES_IN_DATABASE] = sConfigMgr->GetBoolDefault("AllowLoggingIPAddressesInDatabase", true, true);
 
+    SetAreaIdExcludes(sConfigMgr->GetStringDefault("AntiCheats.areaIdExcludes", ""));
+    TC_LOG_INFO("server.loading", "AntiCheat disabled for {} maps", (uint32)_areaIdExcludes.size());
+    sCustomWorldConfig->LoadCustom();
+
     // call ScriptMgr if we're reloading the configuration
     if (reload)
         sScriptMgr->OnConfigLoad(reload);
@@ -2012,6 +2040,9 @@ void World::SetInitialWorldSettings()
 
     TC_LOG_INFO("server.loading", "Loading GameTeleports...");
     sObjectMgr->LoadGameTele();
+
+    TC_LOG_INFO("server.loading", "Loading Player Auto Learn spells...");
+    sObjectMgr->LoadPlayerAutoLearnSpells();
 
     TC_LOG_INFO("server.loading", "Loading Trainers...");       // must be after LoadCreatureTemplates
     sObjectMgr->LoadTrainers();
@@ -3572,6 +3603,16 @@ void World::ReloadRBAC()
 void World::RemoveOldCorpses()
 {
     m_timers[WUPDATE_CORPSES].SetCurrent(m_timers[WUPDATE_CORPSES].GetInterval());
+}
+
+void World::SetAreaIdExcludes(const std::string& areaIdExcludes)
+{
+    _areaIdExcludes.clear();
+
+    std::stringstream excludeStream(areaIdExcludes);
+    std::string temp;
+    while (std::getline(excludeStream, temp, ','))
+        _areaIdExcludes.insert(atoi(temp.c_str()));
 }
 
 Realm realm;

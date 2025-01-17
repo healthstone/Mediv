@@ -16,6 +16,7 @@
  */
 
 #include "MotionMaster.h"
+#include "Anticheat.h"
 #include "AbstractFollower.h"
 #include "Creature.h"
 #include "CreatureAISelector.h"
@@ -627,6 +628,8 @@ void MotionMaster::MoveConfused()
 {
     if (_owner->GetTypeId() == TYPEID_PLAYER)
     {
+        _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
+        _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
         TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveConfused: '{}', started confused movement.", _owner->GetGUID().ToString());
         Add(new ConfusedMovementGenerator<Player>());
     }
@@ -650,8 +653,11 @@ void MotionMaster::MoveFleeing(Unit* enemy, uint32 time)
         else
             Add(new FleeingMovementGenerator<Creature>(enemy->GetGUID()));
     }
-    else
+    else {
+        _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
+        _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
         Add(new FleeingMovementGenerator<Player>(enemy->GetGUID()));
+    }
 }
 
 void MotionMaster::MovePoint(uint32 id, Position const& pos, bool generatePath/* = true*/, Optional<float> finalOrient/* = {}*/)
@@ -663,6 +669,8 @@ void MotionMaster::MovePoint(uint32 id, float x, float y, float z, bool generate
 {
     if (_owner->GetTypeId() == TYPEID_PLAYER)
     {
+        _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
+        _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
         TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MovePoint: '{}', targeted point Id: {} (X: {}, Y: {}, Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
         Add(new PointMovementGenerator<Player>(id, x, y, z, generatePath, 0.0f, finalOrient));
     }
@@ -731,6 +739,8 @@ void MotionMaster::MoveCharge(float x, float y, float z, float speed /*= SPEED_C
 */
     if (_owner->GetTypeId() == TYPEID_PLAYER)
     {
+        _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
+        _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
         TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveCharge: '{}', charging point Id: {} (X: {}, Y: {}, Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
         PointMovementGenerator<Player>* movement = new PointMovementGenerator<Player>(id, x, y, z, generatePath, speed);
         movement->Priority = MOTION_PRIORITY_HIGHEST;
@@ -785,6 +795,12 @@ void MotionMaster::MoveKnockbackFrom(float srcX, float srcY, float speedXY, floa
         init.SetVelocity(speedXY);
     };
 
+    if (_owner->GetTypeId() == TYPEID_PLAYER)
+    {
+        _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
+        _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
+    }
+
     GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, 0);
     movement->Priority = MOTION_PRIORITY_HIGHEST;
     movement->AddFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH);
@@ -830,6 +846,12 @@ void MotionMaster::MoveJump(float x, float y, float z, float o, float speedXY, f
         if (hasOrientation)
             init.SetFacing(o);
     };
+
+    if (_owner->GetTypeId() == TYPEID_PLAYER)
+    {
+        _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
+        _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
+    }
 
     GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, id);
     movement->Priority = MOTION_PRIORITY_HIGHEST;
@@ -958,7 +980,7 @@ void MotionMaster::MoveFall(uint32 id/* = 0*/)
     // Don't run spline movement for players
     if (_owner->GetTypeId() == TYPEID_PLAYER)
     {
-        _owner->ToPlayer()->SetFallInformation(0, _owner->GetPositionZ());
+        _owner->ToPlayer()->GetAnticheat()->resetFallingData(_owner->GetPositionZ());
         return;
     }
 

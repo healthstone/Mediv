@@ -752,6 +752,21 @@ enum RBACPermissions
     // IF YOU ADD NEW PERMISSIONS, ADD THEM IN MASTER BRANCH AS WELL!
     //
     // custom permissions 1000+
+    RBAC_PERM_COMMAND_VIP                                    = 1100,
+    RBAC_PERM_COMMAND_VIP_DEBUFF                             = 1101,
+    RBAC_PERM_COMMAND_VIP_BANK                               = 1102,
+    RBAC_PERM_COMMAND_VIP_MAIL                               = 1103,
+    RBAC_PERM_COMMAND_VIP_REPAIR                             = 1104,
+    RBAC_PERM_COMMAND_VIP_RESETTALENTS                       = 1105,
+    RBAC_PERM_COMMAND_VIP_TAXI                               = 1106,
+    RBAC_PERM_COMMAND_VIP_HOME                               = 1107,
+    RBAC_PERM_COMMAND_VIP_CAPITAL                            = 1108,
+    RBAC_PERM_COMMAND_VIP_CHANGERACE                         = 1109,
+    RBAC_PERM_COMMAND_VIP_CUSTOMIZE                          = 1110,
+    RBAC_PERM_COMMAND_VIP_ARPPEAR                            = 1111,
+    RBAC_PERM_COMMAND_VIP_SET                                = 1112,
+    RBAC_PERM_COMMAND_VIP_REMOVE                             = 1113,
+    RBAC_PERM_COMMAND_ADDCOIN                                = 1114,
     RBAC_PERM_MAX
 };
 

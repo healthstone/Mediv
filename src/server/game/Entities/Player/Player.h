@@ -53,6 +53,8 @@ struct ScalingStatValuesEntry;
 struct TrainerSpell;
 struct VendorItem;
 
+class AditionalData;
+class Anticheat;
 class AchievementMgr;
 class Bag;
 class Battleground;
@@ -947,6 +949,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         bool IsFalling() { return GetPositionZ() < m_lastFallZ; }
         bool IsInAreaTriggerRadius(AreaTriggerEntry const* trigger) const;
+        void UpdateLastZ(float newZ) { m_lastFallZ = newZ; }
 
         void SendInitialPacketsBeforeAddToMap();
         void SendInitialPacketsAfterAddToMap();
@@ -1199,6 +1202,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void TradeCancel(bool sendback, TradeStatus status = TRADE_STATUS_TRADE_CANCELED);
 
         CinematicMgr* GetCinematicMgr() const { return _cinematicMgr; }
+        AditionalData* GetAditionalData() const { return p_aditionalData; }
+        Anticheat* GetAnticheat() const { return p_anticheat; }
 
         void UpdateEnchantTime(uint32 time);
         void UpdateSoulboundTradeItems();
@@ -2031,10 +2036,8 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         /*********************************************************/
         /***                 VARIOUS SYSTEMS                   ***/
         /*********************************************************/
-        void UpdateFallInformationIfNeed(MovementInfo const& minfo, uint16 opcode);
         // only changed for direct client control (possess, vehicle etc.), not stuff you control using pet commands
         WorldObject* m_seer;
-        void SetFallInformation(uint32 time, float z);
         void HandleFall(MovementInfo const& movementInfo);
 
         bool CanFlyInZone(uint32 mapid, uint32 zone, SpellInfo const* bySpell) const;
@@ -2471,6 +2474,7 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         EquipmentSetContainer _equipmentSets;
 
         bool CanAlwaysSee(WorldObject const* obj) const override;
+        bool CanSeeVFD(WorldObject const* obj) const override;
 
         bool IsAlwaysDetectableFor(WorldObject const* seer) const override;
 
@@ -2511,7 +2515,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         MapReference m_mapRef;
 
-        uint32 m_lastFallTime;
         float  m_lastFallZ;
 
         int32 m_MirrorTimer[MAX_TIMERS];
@@ -2553,6 +2556,9 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 manaBeforeDuel;
 
         WorldLocation _corpseLocation;
+
+        AditionalData* p_aditionalData;
+        Anticheat* p_anticheat;
 };
 
 TC_GAME_API void AddItemsSetItem(Player* player, Item* item);

@@ -584,25 +584,31 @@ class TC_GAME_API DynamicObjectScript : public ScriptObject
 
 class TC_GAME_API TransportScript : public ScriptObject
 {
-    protected:
+protected:
 
-        explicit TransportScript(char const* name);
+    explicit TransportScript(char const* name);
 
-    public:
+public:
 
-        // Called when a player boards the transport.
-        virtual void OnAddPassenger(Transport* transport, Player* player);
+    // Called when a player boards the transport.
+    virtual void OnAddPassenger(Transport* transport, Player* player);
 
-        // Called when a creature boards the transport.
-        virtual void OnAddCreaturePassenger(Transport* transport, Creature* creature);
+    // Called when a creature pet boards the transport.
+    virtual void OnAddPassengerPetOrTotem(Transport* /*transport*/, Creature* /*creature*/) { }
 
-        // Called when a player exits the transport.
-        virtual void OnRemovePassenger(Transport* transport, Player* player);
+    // Called when a creature boards the transport.
+    virtual void OnAddCreaturePassenger(Transport* transport, Creature* creature);
 
-        // Called when a transport moves.
-        virtual void OnRelocate(Transport* transport, uint32 waypointId, uint32 mapId, float x, float y, float z);
+    // Called when a player exits the transport.
+    virtual void OnRemovePassenger(Transport* transport, Player* player);
 
-        virtual void OnUpdate(Transport* transport, uint32 diff);
+    // Called when a creature pet exits the transport.
+    virtual void OnRemovePassengerPetOrTotem(Transport* /*transport*/, Creature* /*creature*/) { }
+
+    // Called when a transport moves.
+    virtual void OnRelocate(Transport* transport, uint32 waypointId, uint32 mapId, float x, float y, float z);
+
+    virtual void OnUpdate(Transport* transport, uint32 diff);
 };
 
 class TC_GAME_API AchievementCriteriaScript : public ScriptObject
@@ -993,8 +999,10 @@ class TC_GAME_API ScriptMgr
     public: /* TransportScript */
 
         void OnAddPassenger(Transport* transport, Player* player);
+        void OnAddPassengerPetOrTotem(Transport* transport, Creature* creature);
         void OnAddCreaturePassenger(Transport* transport, Creature* creature);
         void OnRemovePassenger(Transport* transport, Player* player);
+        void OnRemovePassengerPetOrTotem(Transport* transport, Creature* creature);
         void OnTransportUpdate(Transport* transport, uint32 diff);
         void OnRelocate(Transport* transport, uint32 waypointId, uint32 mapId, float x, float y, float z);
 

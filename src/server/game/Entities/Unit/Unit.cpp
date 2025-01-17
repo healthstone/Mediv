@@ -16,6 +16,7 @@
  */
 
 #include "Unit.h"
+#include "Anticheat.h"
 #include "AbstractFollower.h"
 #include "Battlefield.h"
 #include "BattlefieldMgr.h"
@@ -8211,6 +8212,7 @@ void Unit::Mount(uint32 mount, uint32 VehicleId, uint32 creatureEntry)
             if (charm->GetTypeId() == TYPEID_UNIT)
                 charm->SetUnitFlag(UNIT_FLAG_STUNNED);
 
+        player->GetAnticheat()->setUnderACKmount();
         player->SendMovementSetCollisionHeight(player->GetCollisionHeight());
     }
 
@@ -8225,8 +8227,10 @@ void Unit::Dismount()
     SetMountDisplayId(0);
     RemoveUnitFlag(UNIT_FLAG_MOUNT);
 
-    if (Player* thisPlayer = ToPlayer())
+    if (Player* thisPlayer = ToPlayer()) {
         thisPlayer->SendMovementSetCollisionHeight(thisPlayer->GetCollisionHeight());
+        thisPlayer->GetAnticheat()->setUnderACKmount();
+    }
 
     WorldPacket data(SMSG_DISMOUNT, 8);
     data << GetPackGUID();
@@ -8634,7 +8638,12 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
     // Apply strongest slow aura mod to speed
     int32 slow = GetMaxNegativeAuraModifier(SPELL_AURA_MOD_DECREASE_SPEED);
     if (slow)
-        AddPct(speed, slow);
+    {
+        SpellImmuneContainer const& mechanicList = m_spellImmune[IMMUNITY_MECHANIC];
+        //if immune mechanic of snare NOT applied
+        if (mechanicList.count(MECHANIC_SNARE) == 0)
+            AddPct(speed, slow);
+    }
 
     if (float minSpeedMod = (float)GetMaxPositiveAuraModifier(SPELL_AURA_MOD_MINIMUM_SPEED))
     {
@@ -8648,6 +8657,12 @@ void Unit::UpdateSpeed(UnitMoveType mtype)
     }
 
     SetSpeedRate(mtype, speed);
+
+    if (Player* targetPlayer = ToPlayer())
+    {
+        targetPlayer->GetAnticheat()->setUnderACKmount();
+        targetPlayer->GetAnticheat()->setSkipOnePacketForASH(true);
+    }
 }
 
 float Unit::GetSpeed(UnitMoveType mtype) const
@@ -11271,6 +11286,13 @@ void Unit::SetControlled(bool apply, UnitState state)
             default:
                 break;
         }
+
+        if (GetTypeId() == TYPEID_PLAYER)
+        {
+            float fabscount = fabs(float(ToPlayer()->GetAnticheat()->getLastMoveClientTimestamp()) - float(ToPlayer()->GetAnticheat()->getLastMoveServerTimestamp()));
+            uint32 pinginthismoment = uint32(fabscount) / 1000000;
+            ToPlayer()->GetAnticheat()->setRootACKUpd(pinginthismoment);
+        }
     }
     else
     {
@@ -11346,7 +11368,10 @@ void Unit::SetStunned(bool apply)
         StopMoving();
 
         if (GetTypeId() == TYPEID_PLAYER)
+        {
+            ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
             SetStandState(UNIT_STAND_STATE_STAND);
+        }
 
         if (GetTypeId() == TYPEID_PLAYER)
         {
@@ -11415,6 +11440,7 @@ void Unit::SetRooted(bool apply)
             data << GetPackGUID();
             data << m_rootTimes;
             SendMessageToSet(&data, true);
+            ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
         }
         else
         {
@@ -11764,7 +11790,10 @@ void Unit::RemoveCharmedBy(Unit* charmer)
     }
 
     if (Player* player = ToPlayer())
+    {
+        player->GetAnticheat()->setUnderACKmount();
         player->SetClientControl(this, true);
+    }
 
     if (playerCharmer && this != charmer->GetFirstControlled())
         playerCharmer->SendRemoveControlBar();
@@ -12232,6 +12261,12 @@ void Unit::KnockbackFrom(float x, float y, float speedXY, float speedZ)
 
         if (HasAuraType(SPELL_AURA_MOD_INCREASE_MOUNTED_FLIGHT_SPEED) || HasAuraType(SPELL_AURA_FLY))
             SetCanFly(true, true);
+
+        if (Player* player = ToPlayer())
+        {
+            player->GetAnticheat()->setSkipOnePacketForASH(true);
+            player->GetAnticheat()->setUnderACKmount();
+        }
     }
 }
 
@@ -12482,6 +12517,8 @@ void Unit::JumpTo(float speedXY, float speedZ, bool forward, Optional<Position> 
         data << float(speedXY);                                 // Horizontal speed
         data << float(-speedZ);                                 // Z Movement speed (vertical)
 
+        ToPlayer()->GetAnticheat()->setUnderACKmount();
+        ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
         ToPlayer()->SendDirectMessage(&data);
     }
 }
@@ -12621,6 +12658,9 @@ void Unit::_EnterVehicle(Vehicle* vehicle, int8 seatId, AuraApplication const* a
 
     if (Player* player = ToPlayer())
     {
+        player->GetAnticheat()->setUnderACKmount();
+        player->GetAnticheat()->setSkipOnePacketForASH(true);
+
         if (vehicle->GetBase()->GetTypeId() == TYPEID_PLAYER && player->IsInCombat())
         {
             vehicle->GetBase()->RemoveAura(const_cast<AuraApplication*>(aurApp));
@@ -12725,7 +12765,11 @@ void Unit::_ExitVehicle(Position const* exitPosition)
     AddUnitState(UNIT_STATE_MOVE);
 
     if (player)
-        player->SetFallInformation(0, GetPositionZ());
+    {
+        player->GetAnticheat()->resetFallingData(GetPositionZ());
+        player->GetAnticheat()->setUnderACKmount();
+        player->GetAnticheat()->setSkipOnePacketForASH(true);
+    }
     else if (HasUnitMovementFlag(MOVEMENTFLAG_ROOT))
     {
         WorldPacket data(SMSG_SPLINE_MOVE_UNROOT, 8);

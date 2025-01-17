@@ -33,6 +33,7 @@
 #include "SpellMgr.h"
 #include "SpellPackets.h"
 #include "TalentPackets.h"
+#include "Transport.h"
 #include "Unit.h"
 #include "Util.h"
 #include "WorldPacket.h"
@@ -86,6 +87,13 @@ void Pet::AddToWorld()
         GetCharmInfo()->SetIsFollowing(false);
         GetCharmInfo()->SetIsReturning(false);
     }
+
+    Transport* transport = GetOwner()->GetTransport();
+    if (transport)
+    {
+        if (!transport->isPassenger(this->ToCreature()))
+            transport->AddPassenger(this->ToCreature());
+    }
 }
 
 void Pet::RemoveFromWorld()
@@ -93,6 +101,9 @@ void Pet::RemoveFromWorld()
     ///- Remove the pet from the accessor
     if (IsInWorld())
     {
+        Transport* transport = GetTransport();
+        if (transport && transport->isPassenger(this->ToCreature()))
+            transport->RemovePassenger(this->ToCreature());
         ///- Don't call the function for Creature, normal mobs + totems go in a different storage
         Unit::RemoveFromWorld();
         GetMap()->GetObjectsStore().Remove<Pet>(GetGUID());

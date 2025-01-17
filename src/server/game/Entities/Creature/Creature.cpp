@@ -292,6 +292,15 @@ void Creature::AddToWorld()
         if (IsVehicle())
             GetVehicleKit()->Install();
 
+        if (IsTotem())
+        {
+            if (Unit* unitplayer = GetOwner())
+                if (Transport* transport = unitplayer->GetTransport())
+                    if (unitplayer && transport)
+                        if (!transport->isPassenger(this))
+                            transport->AddPassenger(this);
+        }
+
         if (GetZoneScript())
             GetZoneScript()->OnCreatureCreate(this);
     }
@@ -303,6 +312,13 @@ void Creature::RemoveFromWorld()
     {
         if (GetZoneScript())
             GetZoneScript()->OnCreatureRemove(this);
+
+        if (IsTotem())
+        {
+            if (Transport* transport = GetTransport())
+                if (transport->isPassenger(this))
+                    transport->RemovePassenger(this);
+        }
 
         if (m_formation)
             sFormationMgr->RemoveCreatureFromGroup(m_formation, this);
