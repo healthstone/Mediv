@@ -393,6 +393,9 @@ Unit::Unit(bool isWorldObject) :
     _isCombatDisallowed = false;
 
     _lastExtraAttackSpell = 0;
+
+    _isJumping = false;
+    _isCharging = false;
 }
 
 ////////////////////////////////////////////////////////////
@@ -427,6 +430,9 @@ Unit::~Unit()
     ASSERT(m_gameObj.empty());
     ASSERT(m_dynObj.empty());
     ASSERT(!_gameClientMovingMe || _gameClientMovingMe->GetBasePlayer() == this);
+
+    _isJumping = false;
+    _isCharging = false;
 }
 
 void Unit::Update(uint32 p_time)
@@ -4605,6 +4611,25 @@ bool Unit::HasAuraWithMechanic(uint32 mechanicMask) const
             if (iter->second->HasEffect(spellEffectInfo.EffectIndex) && spellEffectInfo.IsEffect() && spellEffectInfo.Mechanic)
                 if (mechanicMask & (1 << spellEffectInfo.Mechanic))
                     return true;
+    }
+
+    return false;
+}
+
+bool Unit::HasAuraFaireFire() const
+{
+    for (AuraApplicationMap::const_iterator iter = m_appliedAuras.begin(); iter != m_appliedAuras.end(); ++iter)
+    {
+        SpellInfo const* spellInfo = iter->second->GetBase()->GetSpellInfo();
+        if (spellInfo)
+        {
+            if (spellInfo->Attributes & SPELL_ATTR0_NOT_SHAPESHIFT &&
+                spellInfo->AttributesEx & SPELL_ATTR1_DISPEL_AURAS_ON_IMMUNITY &&
+                spellInfo->AttributesEx & SPELL_ATTR1_UNAFFECTED_BY_SCHOOL_IMMUNE &&
+                spellInfo->AttributesEx2 & SPELL_ATTR2_NOT_NEED_SHAPESHIFT &&
+                spellInfo->AttributesEx6 & SPELL_ATTR6_UNK23)
+                return true;
+        }
     }
 
     return false;
@@ -10379,6 +10404,17 @@ bool Unit::IsPolymorphed() const
         return false;
 
     return spellInfo->GetSpellSpecific() == SPELL_SPECIFIC_MAGE_POLYMORPH;
+}
+
+bool Unit::IsDazed() const
+{
+    Unit::AuraEffectList const& decSpeedList = GetAuraEffectsByType(SPELL_AURA_MOD_DECREASE_SPEED);
+    Unit::AuraEffectList::const_iterator itr = std::find_if(decSpeedList.begin(), decSpeedList.end(), [](AuraEffect* auraEffect)
+    {
+        return auraEffect->GetSpellInfo()->SpellIconID == 15 && auraEffect->GetSpellInfo()->Dispel == 0;
+    });
+
+    return itr != decSpeedList.end();
 }
 
 void Unit::SetAnimTier(AnimTier tier)

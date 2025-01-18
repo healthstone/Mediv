@@ -1366,6 +1366,23 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffectInfo const& spellEffectIn
                     dest = SpellDestination(*target);
             }
             break;
+        case TARGET_DEST_TARGET_BACK:
+        {
+            if (Unit* unitCaster = m_caster->ToUnit())
+                if (Unit* target = unitCaster->GetVictim())
+                {
+                    Position pos = target->GetPosition();
+                    float vcos, vsin;
+                    unitCaster->GetSinCos(pos.m_positionX, pos.m_positionY, vsin, vcos);
+
+                    pos.m_positionX += 0.05f * vcos;
+                    pos.m_positionY += 0.05f * vsin;
+                    target->UpdateAllowedPositionZ(pos.m_positionX, pos.m_positionY, pos.m_positionZ);
+
+                    dest = SpellDestination(pos.m_positionX, pos.m_positionY, pos.m_positionZ, target->GetOrientation());
+                }
+            break;
+        }
         case TARGET_DEST_CASTER_FISHING:
         {
             float minDist = m_spellInfo->GetMinRange(true);
@@ -1435,6 +1452,8 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffectInfo const& spellEffectIn
                     static float const DefaultTotemDistance = 3.0f;
                     if (!spellEffectInfo.HasRadius())
                         dist = DefaultTotemDistance;
+                    if (m_spellInfo->Id == 6495) // Sentry Totem has 100 basepoints (100 hp, but should be placed near caster)
+                        dist = 5.0f;
                     break;
                 }
                 default:
@@ -1445,7 +1464,25 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffectInfo const& spellEffectIn
                 dist = objSize;
 
             Position pos = dest._position;
-            m_caster->MovePositionToFirstCollision(pos, dist, angle);
+            if (m_caster->GetTransport())
+            {
+                float casterZ = m_caster->GetPositionZ();
+                pos.m_positionZ = m_caster->GetMap()->GetHeight(pos.m_positionX, pos.m_positionY, casterZ + 2 * dist);
+                // check dynamic collision
+                bool dcol = m_caster->GetMap()->getObjectHitPos(m_caster->GetPhaseMask(), m_caster->GetPositionX(), m_caster->GetPositionY(), m_caster->GetPositionZ() + 0.5f, pos.m_positionX, pos.m_positionY, pos.m_positionZ + 0.5f, pos.m_positionX, pos.m_positionY, pos.m_positionZ, -0.5f);
+
+                // Collided with a gameobject
+                if (dcol)
+                {
+                    pos.m_positionX -= CONTACT_DISTANCE * std::cos(angle);
+                    pos.m_positionY -= CONTACT_DISTANCE * std::sin(angle);
+                    pos.m_positionZ = m_caster->GetMap()->GetHeight(m_caster->GetPhaseMask(), pos.m_positionX, pos.m_positionY, pos.m_positionZ + dist);
+                    if (pos.m_positionZ < casterZ)
+                        pos.m_positionZ = casterZ + 1.0f;
+                }
+            }
+            else
+                m_caster->MovePositionToFirstCollision(pos, dist, angle);
 
             dest.Relocate(pos);
             break;
@@ -1974,7 +2011,7 @@ void Spell::SearchChainTargets(std::list<WorldObject*>& targets, uint32 chainTar
                 if (Unit* unit = (*itr)->ToUnit())
                 {
                     uint32 deficit = unit->GetMaxHealth() - unit->GetHealth();
-                    if (deficit > maxHPDeficit && target->IsWithinDist(unit, jumpRadius) && target->IsWithinLOSInMap(unit, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2))
+                    if (deficit > maxHPDeficit && target->IsWithinDist(unit, jumpRadius) && target->IsWithinLOSInMap(unit, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::Nothing))
                     {
                         foundItr = itr;
                         maxHPDeficit = deficit;
@@ -3196,6 +3233,16 @@ SpellCastResult Spell::prepare(SpellCastTargets const& targets, AuraEffect const
     else
         m_casttime = m_spellInfo->CalcCastTime(this);
 
+    if (Unit* unitCaster = m_caster->ToUnit())
+    {
+        if (unitCaster->IsJumping() && m_casttime != 0)
+        {
+            SendCastResult(SPELL_FAILED_SPELL_IN_PROGRESS);
+            finish(false);
+            return SPELL_FAILED_SPELL_IN_PROGRESS;
+        }
+    }
+
     SpellCastResult movementResult = SPELL_CAST_OK;
     if (m_caster->IsUnit() && m_caster->ToUnit()->isMoving())
         movementResult = CheckMovement();
@@ -3701,6 +3748,13 @@ void Spell::handle_immediate()
             m_spellState = SPELL_STATE_CASTING;
             // GameObjects shouldn't cast channeled spells
             ASSERT_NOTNULL(m_caster->ToUnit())->AddInterruptMask(m_spellInfo->ChannelInterruptFlags);
+        }
+
+        // interrupt movement at channeled spells for creature case
+        if (Unit* unitCaster = m_caster->ToUnit())
+        {
+            if (unitCaster->isMoving() && !m_spellInfo->HasAttribute(SPELL_ATTR5_CAN_CHANNEL_WHEN_MOVING))
+                unitCaster->StopMoving();
         }
     }
 
@@ -5262,7 +5316,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
             if (m_triggeredByAuraSpell || m_spellInfo->IsCooldownStartedOnEvent())
                 return SPELL_FAILED_DONT_REPORT;
             else
-                return SPELL_FAILED_NOT_READY;
+                return (m_spellInfo->Id == 15473 || m_spellInfo->Id == 46584) ? SPELL_FAILED_CANT_DO_THAT_RIGHT_NOW : SPELL_FAILED_NOT_READY; // !Hack, returning not ready bugs shadowform client
         }
     }
 
@@ -5270,6 +5324,19 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
     {
         m_customError = SPELL_CUSTOM_ERROR_GM_ONLY;
         return SPELL_FAILED_CUSTOM_ERROR;
+    }
+
+    for (SpellEffectInfo const& spellEffectInfo : m_spellInfo->GetEffects())
+    {
+        if (!spellEffectInfo.IsAura())
+            continue;
+
+        if (spellEffectInfo.ApplyAuraName == SPELL_AURA_MOD_STEALTH || spellEffectInfo.ApplyAuraName == SPELL_AURA_MOD_INVISIBILITY)
+        {
+            if (m_caster->ToUnit() &&
+                m_caster->ToUnit()->HasAuraFaireFire())
+                return SPELL_FAILED_DONT_REPORT;
+        }
     }
 
     // Check global cooldown
@@ -5443,7 +5510,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
                     if (DynamicObject* dynObj = m_caster->ToUnit()->GetDynObject(m_triggeredByAuraSpell->Id))
                         losTarget = dynObj;
 
-                if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, m_spellInfo->Id, nullptr, SPELL_DISABLE_LOS) && !target->IsWithinLOSInMap(losTarget, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2))
+                if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, m_spellInfo->Id, nullptr, SPELL_DISABLE_LOS) && !target->IsWithinLOSInMap(losTarget, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)) && !m_spellInfo->HasAttribute(SPELL_ATTR2_TRIGGERED_CAN_TRIGGER_PROC))
                     return SPELL_FAILED_LINE_OF_SIGHT;
             }
         }
@@ -5455,7 +5522,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
         float x, y, z;
         m_targets.GetDstPos()->GetPosition(x, y, z);
 
-        if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, m_spellInfo->Id, nullptr, SPELL_DISABLE_LOS) && !m_caster->IsWithinLOS(x, y, z, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2))
+        if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, m_spellInfo->Id, nullptr, SPELL_DISABLE_LOS) && !m_caster->IsWithinLOS(x, y, z, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)) && !m_spellInfo->HasAttribute(SPELL_ATTR2_TRIGGERED_CAN_TRIGGER_PROC))
             return SPELL_FAILED_LINE_OF_SIGHT;
     }
 
@@ -5731,20 +5798,41 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
 
                     float objSize = target->GetCombatReach();
                     float range = m_spellInfo->GetMaxRange(true, unitCaster, this) * 1.5f + objSize; // can't be overly strict
-
-                    m_preGeneratedPath = std::make_unique<PathGenerator>(unitCaster);
-                    m_preGeneratedPath->SetPathLengthLimit(range);
-
-                    // first try with raycast, if it fails fall back to normal path
-                    bool result = m_preGeneratedPath->CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), false);
-                    if (m_preGeneratedPath->GetPathType() & PATHFIND_SHORT)
-                        return SPELL_FAILED_NOPATH;
-                    else if (!result || m_preGeneratedPath->GetPathType() & (PATHFIND_NOPATH | PATHFIND_INCOMPLETE))
-                        return SPELL_FAILED_NOPATH;
-                    else if (m_preGeneratedPath->IsInvalidDestinationZ(target)) // Check position z, if not in a straight line
+                    if (!target->IsWithinDist3d(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ(), range))
                         return SPELL_FAILED_NOPATH;
 
-                    m_preGeneratedPath->ShortenPathUntilDist(PositionToVector3(target), objSize); // move back
+                    if (!unitCaster->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) || !target->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+                    {
+                        m_preGeneratedPath = std::make_unique<PathGenerator>(unitCaster);
+                        m_preGeneratedPath->SetPathLengthLimit(range * 2.0f);
+
+                        /* ToDo: it's unclear why we need a Z offset, maybe because some creatures are a bit underground ?
+                         * Anyway ignore Z offset if the creature is underwater or flying as these can't be underground
+                         */
+                        float targetObjectSizeForZOffset = 0.0f;
+                        if (!target->IsUnderWater() && !target->IsFlying())
+                            targetObjectSizeForZOffset = std::min(target->GetCombatReach(), 4.0f);
+
+                        // first try with raycast, if it fails fall back to normal path
+                        bool result = m_preGeneratedPath->CalculatePath(target->GetPositionX(), target->GetPositionY(), target->GetPositionZ() + targetObjectSizeForZOffset, false);
+                        if (m_preGeneratedPath->GetPathType() & PATHFIND_SHORT)
+                            return SPELL_FAILED_OUT_OF_RANGE;
+                        else if (!result || m_preGeneratedPath->GetPathType() & (PATHFIND_NOPATH | PATHFIND_INCOMPLETE))
+                        {
+                            // second try with raycast for the closest position
+                            float x, y, z;
+                            target->GetClosePoint(x, y, z, targetObjectSizeForZOffset);
+                            target->GetMap()->getObjectHitPos(target->GetPhaseMask(), target->GetPositionX(), target->GetPositionY(), target->GetPositionZ() + targetObjectSizeForZOffset, x, y, z + targetObjectSizeForZOffset, x, y, z, -targetObjectSizeForZOffset);
+                            result = m_preGeneratedPath->CalculatePath(x, y, z + targetObjectSizeForZOffset, false);
+
+                            if (!result || m_preGeneratedPath->GetPathType() & (PATHFIND_NOPATH | PATHFIND_INCOMPLETE))
+                                return SPELL_FAILED_NOPATH;
+                        }
+                        else if (m_preGeneratedPath->IsInvalidDestinationZ(target)) // Check position z, if not in a straight line
+                            return SPELL_FAILED_NOPATH;
+
+                        m_preGeneratedPath->ShortenPathUntilDist(PositionToVector3(target), objSize); // move back
+                    }
                 }
                 break;
             }
@@ -6298,6 +6386,10 @@ SpellCastResult Spell::CheckCasterAuras(uint32* param1) const
     // spells totally immuned to caster auras (wsg flag drop, give marks etc)
     if (m_spellInfo->HasAttribute(SPELL_ATTR6_IGNORE_CASTER_AURAS))
         return SPELL_CAST_OK;
+
+    /*// hack, but nessesary for stop cast under by cyclone ( hope it not needed now, need test )
+    if (m_spellInfo->HasAttribute(SPELL_ATTR1_DISPEL_AURAS_ON_IMMUNITY) && m_caster->HasAura(33786) && m_spellInfo->Id != 59752 && m_spellInfo->Id != 42292)
+        return SPELL_FAILED_STUNNED;*/
 
     // these attributes only show the spell as usable on the client when it has related aura applied
     // still they need to be checked against certain mechanics
@@ -7512,7 +7604,7 @@ bool Spell::CheckEffectTarget(Unit const* target, SpellEffectInfo const& spellEf
         {
             if (!m_targets.GetCorpseTargetGUID())
             {
-                if (target->IsWithinLOSInMap(m_caster, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2) && target->HasUnitFlag(UNIT_FLAG_SKINNABLE))
+                if (target->IsWithinLOSInMap(m_caster, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)) && target->HasUnitFlag(UNIT_FLAG_SKINNABLE))
                     return true;
 
                 return false;
@@ -7528,7 +7620,7 @@ bool Spell::CheckEffectTarget(Unit const* target, SpellEffectInfo const& spellEf
             if (!corpse->HasFlag(CORPSE_FIELD_FLAGS, CORPSE_FLAG_LOOTABLE))
                 return false;
 
-            if (!corpse->IsWithinLOSInMap(m_caster, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2))
+            if (!corpse->IsWithinLOSInMap(m_caster, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)))
                 return false;
 
             break;
@@ -7536,7 +7628,7 @@ bool Spell::CheckEffectTarget(Unit const* target, SpellEffectInfo const& spellEf
         default:                                            // normal case
         {
             if (losPosition)
-                return target->IsWithinLOS(losPosition->GetPositionX(), losPosition->GetPositionY(), losPosition->GetPositionZ(), LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2);
+                return target->IsWithinLOS(losPosition->GetPositionX(), losPosition->GetPositionY(), losPosition->GetPositionZ(), LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2));
             else
             {
                 // Get GO cast coordinates if original caster -> GO
@@ -7545,7 +7637,7 @@ bool Spell::CheckEffectTarget(Unit const* target, SpellEffectInfo const& spellEf
                     caster = m_caster->GetMap()->GetGameObject(m_originalCasterGUID);
                 if (!caster)
                     caster = m_caster;
-                if (target != m_caster && !target->IsWithinLOSInMap(caster, LINEOFSIGHT_ALL_CHECKS, VMAP::ModelIgnoreFlags::M2))
+                if (target != m_caster && !target->IsWithinLOSInMap(caster, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)))
                     return false;
             }
             break;

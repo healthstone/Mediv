@@ -37,6 +37,7 @@
 #include <iterator>
 
 #include "ChaseMovementGenerator.h"
+#include "ChargeMovementGenerator.h"
 #include "ConfusedMovementGenerator.h"
 #include "FleeingMovementGenerator.h"
 #include "FlightPathMovementGenerator.h"
@@ -46,6 +47,7 @@
 #include "HomeMovementGenerator.h"
 #include "IdleMovementGenerator.h"
 #include "PointMovementGenerator.h"
+#include "JumpMovementGenerator.h"
 #include "RandomMovementGenerator.h"
 #include "SplineChainMovementGenerator.h"
 #include "WaypointMovementGenerator.h"
@@ -742,32 +744,31 @@ void MotionMaster::MoveCharge(float x, float y, float z, float speed /*= SPEED_C
         _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
         _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
         TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveCharge: '{}', charging point Id: {} (X: {}, Y: {}, Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
-        PointMovementGenerator<Player>* movement = new PointMovementGenerator<Player>(id, x, y, z, generatePath, speed);
-        movement->Priority = MOTION_PRIORITY_HIGHEST;
-        movement->BaseUnitState = UNIT_STATE_CHARGING;
-        Add(movement);
+        Add(new ChargeMovementGenerator<Player>(id, x, y, z, generatePath, speed));
     }
     else
     {
         TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveCharge: '{}', charging point Id: {} (X: {}, Y: {}, Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
-        PointMovementGenerator<Creature>* movement = new PointMovementGenerator<Creature>(id, x, y, z, generatePath, speed);
-        movement->Priority = MOTION_PRIORITY_HIGHEST;
-        movement->BaseUnitState = UNIT_STATE_CHARGING;
-        Add(movement);
+        Add(new ChargeMovementGenerator<Creature>(id, x, y, z, generatePath, speed));
     }
 }
 
 void MotionMaster::MoveCharge(PathGenerator const& path, float speed /*= SPEED_CHARGE*/)
 {
+    uint32 id = EVENT_CHARGE;
     G3D::Vector3 dest = path.GetActualEndPosition();
-
-    MoveCharge(dest.x, dest.y, dest.z, speed, EVENT_CHARGE_PREPATH);
-
-    // Charge movement is not started when using EVENT_CHARGE_PREPATH
-    Movement::MoveSplineInit init(_owner);
-    init.MovebyPath(path.GetPath());
-    init.SetVelocity(speed);
-    init.Launch();
+    if (_owner->GetTypeId() == TYPEID_PLAYER)
+    {
+        TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveCharge: '{}', charging point Id: {} (X: {}, Y: {}, Z: {}) BY PATH", _owner->GetGUID().ToString(), id, dest.x, dest.y, dest.z);
+        _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
+        _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
+        Add(new ChargePathMovementGenerator<Player>(id, dest.x, dest.y, dest.z, path, speed));
+    }
+    else
+    {
+        TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveCharge: '{}', charging point Id: {} (X: {}, Y: {}, Z: {}) BY PATH", _owner->GetGUID().ToString(), id, dest.x, dest.y, dest.z);
+        Add(new ChargePathMovementGenerator<Creature>(id, dest.x, dest.y, dest.z, path, speed));
+    }
 }
 
 void MotionMaster::MoveKnockbackFrom(float srcX, float srcY, float speedXY, float speedZ)
@@ -779,32 +780,26 @@ void MotionMaster::MoveKnockbackFrom(float srcX, float srcY, float speedXY, floa
     if (speedXY < 0.01f)
         return;
 
-    Position dest = _owner->GetPosition();
+    float x, y, z;
     float moveTimeHalf = speedZ / Movement::gravity;
     float dist = 2 * moveTimeHalf * speedXY;
     float max_height = -Movement::computeFallElevation(moveTimeHalf, false, -speedZ);
 
     // Use a mmap raycast to get a valid destination.
-    _owner->MovePositionToFirstCollision(dest, dist, _owner->GetRelativeAngle(srcX, srcY) + float(M_PI));
-
-    std::function<void(Movement::MoveSplineInit&)> initializer = [=](Movement::MoveSplineInit& init)
-    {
-        init.MoveTo(dest.GetPositionX(), dest.GetPositionY(), dest.GetPositionZ(), false);
-        init.SetParabolic(max_height, 0);
-        init.SetOrientationFixed(true);
-        init.SetVelocity(speedXY);
-    };
+    _owner->GetNearPoint(_owner, x, y, z, dist, _owner->GetAbsoluteAngle(srcX, srcY) + float(M_PI));
+    float bonusZ = _owner->GetExactDist2d(x, y) + _owner->GetCollisionHeight() + max_height;
+    z = _owner->GetMap()->GetHeight(_owner->GetPhaseMask(), x, y, z + bonusZ, true);
+    _owner->UpdateAllowedPositionZ(x, y, z);
+    z += 0.5f;
 
     if (_owner->GetTypeId() == TYPEID_PLAYER)
     {
         _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
         _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
     }
-
-    GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, 0);
-    movement->Priority = MOTION_PRIORITY_HIGHEST;
-    movement->AddFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH);
-    Add(movement);
+    TC_LOG_DEBUG("misc", "Creature (Entry: {} GUID: {}) (X: {} Y: {} Z: {}) MoveKnockbackFrom at point (X: {} Y: {} Z: {}) and speedXY = {}, max_height = {}",
+        _owner->GetEntry(), _owner->GetGUID().ToString(), _owner->GetPositionX(), _owner->GetPositionY(), _owner->GetPositionZ(), x, y, z, speedXY, max_height);
+    Add(new JumpMovementGenerator<Creature>(EVENT_JUMP, x, y, z, 0.0f, speedXY, max_height + _owner->GetCollisionHeight(), false, true));
 }
 
 void MotionMaster::MoveJumpTo(float angle, float speedXY, float speedZ)
@@ -819,7 +814,13 @@ void MotionMaster::MoveJumpTo(float angle, float speedXY, float speedZ)
     float dist = 2 * moveTimeHalf * speedXY;
 
     _owner->GetNearPoint2D(nullptr, x, y, dist, _owner->GetOrientation() + angle);
+
+    float max_height = (_owner->GetExactDist2d(x, y) * moveTimeHalf) / 10.0f;
+    float bonusZ = _owner->GetExactDist2d(x, y) + _owner->GetCollisionHeight() + max_height;
+
+    z = _owner->GetMap()->GetHeight(_owner->GetPhaseMask(), x, y, _owner->GetPositionZ() + bonusZ, true);
     _owner->UpdateAllowedPositionZ(x, y, z);
+    z += 0.5f;
 
     MoveJump(x, y, z, 0.0f, speedXY, speedZ);
 }
@@ -831,33 +832,27 @@ void MotionMaster::MoveJump(Position const& pos, float speedXY, float speedZ, ui
 
 void MotionMaster::MoveJump(float x, float y, float z, float o, float speedXY, float speedZ, uint32 id, bool hasOrientation /* = false*/)
 {
+    if (!_owner)
+        return;
+
     TC_LOG_DEBUG("movement.motionmaster", "MotionMaster::MoveJump: '{}', jumps to point Id: {} (X: {}, Y: {}, Z: {})", _owner->GetGUID().ToString(), id, x, y, z);
     if (speedXY < 0.01f)
         return;
 
     float moveTimeHalf = speedZ / Movement::gravity;
     float max_height = -Movement::computeFallElevation(moveTimeHalf, false, -speedZ);
-
-    std::function<void(Movement::MoveSplineInit&)> initializer = [=](Movement::MoveSplineInit& init)
-    {
-        init.MoveTo(x, y, z, false);
-        init.SetParabolic(max_height, 0);
-        init.SetVelocity(speedXY);
-        if (hasOrientation)
-            init.SetFacing(o);
-    };
+    //float max_height = (_owner->GetExactDist2d(x, y) * moveTimeHalf) / 10.0f;
 
     if (_owner->GetTypeId() == TYPEID_PLAYER)
     {
         _owner->ToPlayer()->GetAnticheat()->setUnderACKmount();
         _owner->ToPlayer()->GetAnticheat()->setSkipOnePacketForASH(true);
+        Add(new JumpMovementGenerator<Player>(id, x, y, z, o, speedXY, max_height, hasOrientation));
     }
-
-    GenericMovementGenerator* movement = new GenericMovementGenerator(std::move(initializer), EFFECT_MOTION_TYPE, id);
-    movement->Priority = MOTION_PRIORITY_HIGHEST;
-    movement->BaseUnitState = UNIT_STATE_JUMPING;
-    movement->AddFlag(MOVEMENTGENERATOR_FLAG_PERSIST_ON_DEATH);
-    Add(movement);
+    else
+    {
+        Add(new JumpMovementGenerator<Creature>(id, x, y, z, o, speedXY, max_height, hasOrientation));
+    }
 }
 
 void MotionMaster::MoveCirclePath(float x, float y, float z, float radius, bool clockwise, uint8 stepCount)
