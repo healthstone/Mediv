@@ -1407,11 +1407,8 @@ void Spell::SelectImplicitCasterDestTargets(SpellEffectInfo const& spellEffectIn
                 break;
 
             float dist = spellEffectInfo.CalcRadius(unitCaster);
-            float angle = targetType.CalcDirectionAngle();
-
             Position pos = dest._position;
-
-            unitCaster->MovePositionToFirstCollision(pos, dist, angle);
+            unitCaster->MoveBlinkPosition(pos, dist);
             dest.Relocate(pos);
             break;
         }
