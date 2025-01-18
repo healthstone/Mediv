@@ -1167,6 +1167,7 @@ class TC_GAME_API Unit : public WorldObject
         bool IsFeared()  const { return HasAuraType(SPELL_AURA_MOD_FEAR); }
         bool IsRooted() const { return HasAuraType(SPELL_AURA_MOD_ROOT); }
         bool IsPolymorphed() const;
+        bool IsDazed() const;
         bool IsFrozen() const { return HasAuraState(AURA_STATE_FROZEN); }
 
         bool isTargetableForAttack(bool checkFakeDeath = true) const;
@@ -1412,6 +1413,7 @@ class TC_GAME_API Unit : public WorldObject
         bool HasAuraTypeWithTriggerSpell(AuraType auratype, uint32 triggerSpell) const;
         bool HasNegativeAuraWithInterruptFlag(uint32 flag, ObjectGuid guid = ObjectGuid::Empty) const;
         bool HasAuraWithMechanic(uint32 mechanicMask) const;
+        bool HasAuraFaireFire() const;
         bool HasStrongerAuraWithDR(SpellInfo const* auraSpellInfo, Unit* caster, bool triggered) const;
 
         AuraEffect* IsScriptOverriden(SpellInfo const* spell, int32 script) const;
@@ -1762,6 +1764,10 @@ class TC_GAME_API Unit : public WorldObject
         virtual bool CanFly() const = 0;
         bool IsFlying() const   { return m_movementInfo.HasMovementFlag(MOVEMENTFLAG_FLYING | MOVEMENTFLAG_DISABLE_GRAVITY); }
         bool IsFalling() const;
+        bool IsJumping() const { return _isJumping; }
+        void SetIsJumping(bool jump) { _isJumping = jump; }
+        bool IsCharging() const { return _isCharging; }
+        void SetIsCharging(bool jump) { _isCharging = jump; }
         virtual bool CanEnterWater() const = 0;
         virtual bool CanSwim() const;
 
@@ -1829,6 +1835,8 @@ class TC_GAME_API Unit : public WorldObject
         void SetIsCombatDisallowed(bool apply) { _isCombatDisallowed = apply; }
 
         std::string GetDebugInfo() const override;
+
+        void UpdateSplinePosition();
 
     protected:
         explicit Unit (bool isWorldObject);
@@ -1919,7 +1927,6 @@ class TC_GAME_API Unit : public WorldObject
     private:
 
         void UpdateSplineMovement(uint32 t_diff);
-        void UpdateSplinePosition();
         void InterruptMovementBasedAuras();
         void CheckPendingMovementAcks();
 
@@ -1975,7 +1982,8 @@ class TC_GAME_API Unit : public WorldObject
         bool _isWalkingBeforeCharm;     ///< Are we walking before we were charmed?
 
         SpellHistory* _spellHistory;
-
+        bool _isJumping;
+        bool _isCharging;
         PositionUpdateInfo _positionUpdateInfo;
 
         bool _isCombatDisallowed;

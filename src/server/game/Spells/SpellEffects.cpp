@@ -421,6 +421,7 @@ void Spell::EffectSchoolDMG()
                     {
                         // Calculate damage of Immolate/Shadowflame tick
                         int32 pdamage = aura->GetAmount();
+                        pdamage = unitTarget->SpellDamageBonusTaken(unitCaster, aura->GetSpellInfo(), pdamage, DOT);
 
                         // And multiply by amount of ticks to get damage potential
                         pdamage *= aura->GetSpellInfo()->GetMaxTicks();
@@ -434,6 +435,7 @@ void Spell::EffectSchoolDMG()
                         ASSERT(m_spellInfo->GetMaxTicks() > 0);
                         m_spellValue->EffectBasePoints[EFFECT_1] = dotBasePoints / m_spellInfo->GetMaxTicks();
 
+                        apply_direct_bonus = false;
                         // Glyph of Conflagrate
                         if (!unitCaster->HasAura(56235))
                             unitTarget->RemoveAurasDueToSpell(aura->GetId(), unitCaster->GetGUID());
@@ -594,21 +596,8 @@ void Spell::EffectSchoolDMG()
                 // Steady Shot
                 else if (m_spellInfo->SpellFamilyFlags[1] & 0x1)
                 {
-                    bool found = false;
-                    // check dazed affect
-                    Unit::AuraEffectList const& decSpeedList = unitTarget->GetAuraEffectsByType(SPELL_AURA_MOD_DECREASE_SPEED);
-                    for (Unit::AuraEffectList::const_iterator iter = decSpeedList.begin(); iter != decSpeedList.end(); ++iter)
-                    {
-                        if ((*iter)->GetSpellInfo()->SpellIconID == 15 && (*iter)->GetSpellInfo()->Dispel == 0)
-                        {
-                            found = true;
-                            break;
-                        }
-                    }
-
-                    /// @todo should this be put on taken but not done?
-                    if (found)
-                        damage += m_spellInfo->GetEffect(EFFECT_1).CalcValue();
+                    if (unitTarget->IsDazed())
+                        m_damage += m_spellInfo->GetEffect(EFFECT_1).CalcValue();
 
                     if (Player* caster = unitCaster->ToPlayer())
                     {
@@ -626,6 +615,9 @@ void Spell::EffectSchoolDMG()
                         else
                             damage += irand(int32(dmg_min), int32(dmg_max));
                         damage += int32(caster->GetAmmoDPS() * caster->GetAttackTime(RANGED_ATTACK) * 0.001f);
+
+                        float RAP = caster->GetTotalAttackPowerValue(RANGED_ATTACK);
+                        m_damage += int32(RAP * 0.1f);
                     }
                 }
                 break;
@@ -2120,6 +2112,21 @@ void Spell::EffectSummonType()
                     break;
                 }
                 case SUMMON_TYPE_LIGHTWELL:
+                {
+                    if (!unitCaster)
+                        return;
+
+                    summon = unitCaster->GetMap()->SummonCreature(entry, *destTarget, properties, duration, unitCaster, m_spellInfo->Id);
+                    if (!summon || !summon->IsTotem())
+                        return;
+
+                    uint32 hp = unitCaster->CountPctFromMaxHealth(30);
+                    summon->SetMaxHealth(hp);
+                    summon->SetHealth(hp);
+
+                    summon->SetArmor(unitCaster->GetArmor());
+                    break;
+                }
                 case SUMMON_TYPE_TOTEM:
                 {
                     if (!unitCaster)
@@ -2888,7 +2895,10 @@ void Spell::EffectSummonPet()
             //OldSummon->GetMap()->Remove(OldSummon->ToCreature(), false);
 
             float px, py, pz;
-            owner->GetClosePoint(px, py, pz, OldSummon->GetCombatReach());
+            if (owner->GetTransport())
+                owner->GetPosition(px, py, pz);
+            else
+                owner->GetClosePoint(px, py, pz, OldSummon->GetCombatReach());
 
             OldSummon->NearTeleportTo(px, py, pz, OldSummon->GetOrientation());
             //OldSummon->Relocate(px, py, pz, OldSummon->GetOrientation());
@@ -2914,7 +2924,10 @@ void Spell::EffectSummonPet()
     }
 
     float x, y, z;
-    owner->GetClosePoint(x, y, z, owner->GetCombatReach());
+    if (owner->GetTransport())
+        owner->GetPosition(x, y, z);
+    else
+        owner->GetClosePoint(x, y, z, owner->GetCombatReach());
     Pet* pet = owner->SummonPet(petentry, x, y, z, owner->GetOrientation(), SUMMON_PET, 0);
     if (!pet)
         return;
@@ -4271,9 +4284,14 @@ void Spell::EffectCharge()
         // Spell is not using explicit target - no generated path
         if (!m_preGeneratedPath)
         {
-            //unitTarget->GetContactPoint(m_caster, pos.m_positionX, pos.m_positionY, pos.m_positionZ);
-            Position pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(m_caster));
-            unitCaster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ, speed);
+            Position pos;
+            float targetObjectSizeForZOffset = std::min(unitTarget->GetCombatReach(), 4.0f);
+
+            if (unitCaster->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT) || unitTarget->HasUnitMovementFlag(MOVEMENTFLAG_ONTRANSPORT))
+                pos = unitTarget->GetPosition();
+            else
+                pos = unitTarget->GetFirstCollisionPosition(unitTarget->GetCombatReach(), unitTarget->GetRelativeAngle(unitCaster));
+            unitCaster->GetMotionMaster()->MoveCharge(pos.m_positionX, pos.m_positionY, pos.m_positionZ + targetObjectSizeForZOffset, speed);
         }
         else
             unitCaster->GetMotionMaster()->MoveCharge(*m_preGeneratedPath, speed);
@@ -5246,11 +5264,18 @@ void Spell::SummonGuardian(SpellEffectInfo const& spellEffectInfo, uint32 entry,
     for (uint32 count = 0; count < numGuardians; ++count)
     {
         Position pos;
-        if (count == 0)
-            pos = *destTarget;
+        if (unitCaster->GetTransport())
+            pos = unitCaster->GetPosition();
         else
-            // randomize position for multiple summons
-            pos = unitCaster->GetRandomPoint(*destTarget, radius);
+        {
+            if (count == 0)
+                pos.Relocate(destTarget->GetPositionX(), destTarget->GetPositionY(), destTarget->GetPositionZ(), destTarget->GetOrientation());
+            else
+            {
+                // randomize position for multiple summons
+                pos = unitCaster->GetRandomPoint(*destTarget, radius);
+            }
+        }
 
         TempSummon* summon = map->SummonCreature(entry, pos, properties, duration, unitCaster, m_spellInfo->Id);
         if (!summon)
