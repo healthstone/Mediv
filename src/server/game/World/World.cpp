@@ -60,6 +60,7 @@
 #include "MapManager.h"
 #include "Memory.h"
 #include "Metric.h"
+#include "MedivhAdditionalMgr.h"
 #include "MMapFactory.h"
 #include "ObjectAccessor.h"
 #include "ObjectMgr.h"
@@ -2041,9 +2042,6 @@ void World::SetInitialWorldSettings()
     TC_LOG_INFO("server.loading", "Loading GameTeleports...");
     sObjectMgr->LoadGameTele();
 
-    TC_LOG_INFO("server.loading", "Loading Player Auto Learn spells...");
-    sObjectMgr->LoadPlayerAutoLearnSpells();
-
     TC_LOG_INFO("server.loading", "Loading Trainers...");       // must be after LoadCreatureTemplates
     sObjectMgr->LoadTrainers();
 
@@ -2268,6 +2266,10 @@ void World::SetInitialWorldSettings()
             }
         });
     }
+
+    // Loading custom Medivh features
+    TC_LOG_INFO("server.loading", "Loading Medivh features");
+    sMedivhAdditionalMgr->Initialize();
 
     uint32 startupDuration = GetMSTimeDiffToNow(startupBegin);
 

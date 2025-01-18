@@ -169,16 +169,6 @@ struct GameTele
 
 typedef std::unordered_map<uint32, GameTele> GameTeleContainer;
 
-struct PlayerAutoLearn
-{
-    uint32 spellId;
-    uint8 reqlevel;
-    uint8 reqclass;
-    uint32 reqSpellId;
-};
-
-typedef std::unordered_map<uint32, PlayerAutoLearn> PlayerAutoLearnContainer;
-
 enum ScriptsType
 {
     SCRIPTS_FIRST = 1,
@@ -1232,7 +1222,6 @@ class TC_GAME_API ObjectMgr
         void LoadNPCSpellClickSpells();
 
         void LoadGameTele();
-        void LoadPlayerAutoLearnSpells();
 
         void LoadGossipMenu();
         void LoadGossipMenuItems();
@@ -1487,8 +1476,6 @@ class TC_GAME_API ObjectMgr
         bool AddGameTele(GameTele& data);
         bool DeleteGameTele(std::string_view name);
 
-        PlayerAutoLearnContainer const& GetPlayerAutoLearnMap() const { return _playerAutoLearnStore; }
-
         Trainer::Trainer const* GetTrainer(uint32 creatureId) const;
         std::vector<Trainer::Trainer const*> const& GetClassTrainers(uint8 classId) const { return _classTrainers.at(classId); }
 
@@ -1628,7 +1615,6 @@ class TC_GAME_API ObjectMgr
         ReservedNamesContainer _reservedNamesStore;
 
         GameTeleContainer _gameTeleStore;
-        PlayerAutoLearnContainer _playerAutoLearnStore;
 
         ScriptNameContainer _scriptNamesStore;
 

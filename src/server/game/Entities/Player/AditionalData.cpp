@@ -3,7 +3,7 @@
 #include "AuctionHouseMgr.h"
 #include "Chat.h"
 #include "GameTime.h"
-#include "ObjectMgr.h"
+#include "MedivhAdditionalMgr.h"
 #include "Log.h"
 #include "Player.h"
 #include "Transport.h"
@@ -200,22 +200,22 @@ void AditionalData::LearnSpellFromAutoLearnSpells(uint8 level)
         return;
 
     uint8 classid = pPlayer->GetClass();
-    for (auto const itr: sObjectMgr->GetPlayerAutoLearnMap())
+    for (auto const itr: sMedivhAdditionalMgr->GetPlayerAutoLearnMap())
     {
-        if (PlayerAutoLearn const* pautolearn = &itr.second) {
-            if (pautolearn->reqlevel > level)
+        if (PlayerAutoLearn const* pAutoLearn = itr.second) {
+            if (pAutoLearn->reqlevel > level)
                 continue;
 
-            if (pautolearn->reqclass != 0)
-                if (pautolearn->reqclass != classid)
+            if (pAutoLearn->reqclass != 0)
+                if (pAutoLearn->reqclass != classid)
                     continue;
 
-            if (pautolearn->reqSpellId != 0)
-                if (!pPlayer->HasSpell(pautolearn->reqSpellId))
+            if (pAutoLearn->reqSpellId != 0)
+                if (!pPlayer->HasSpell(pAutoLearn->reqSpellId))
                     continue;
 
-            if (!pPlayer->HasSpell(pautolearn->spellId))
-                pPlayer->LearnSpell(pautolearn->spellId, false);
+            if (!pPlayer->HasSpell(pAutoLearn->spellId))
+                pPlayer->LearnSpell(pAutoLearn->spellId, false);
         }
     }
 }
