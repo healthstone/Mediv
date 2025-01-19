@@ -77,7 +77,18 @@ enum HunterSpells
     SPELL_HUNTER_WYVERN_STING_DOT_R3                = 24135,
     SPELL_HUNTER_WYVERN_STING_DOT_R4                = 27069,
     SPELL_HUNTER_WYVERN_STING_DOT_R5                = 49009,
-    SPELL_HUNTER_WYVERN_STING_DOT_R6                = 49010
+    SPELL_HUNTER_WYVERN_STING_DOT_R6                = 49010,
+    SPELL_HUNTER_PET_SCALING_01                     = 34902,
+    SPELL_HUNTER_PET_SCALING_02                     = 34903,
+    SPELL_HUNTER_PET_SCALING_03                     = 34904,
+    SPELL_HUNTER_PET_SCALING_04                     = 61017,
+};
+
+enum Icons
+{
+    SPELL_ICON_WILD_HUNT        = 3748,
+    SPELL_ICON_HUNTER_VS_WILD   = 3647,
+    SPELL_ICON_ANIMAL_HANDLER   = 2234
 };
 
 enum HunterSpellIcons
@@ -1363,6 +1374,172 @@ class spell_hun_wyvern_sting : public AuraScript
     }
 };
 
+// 34902 - Hunter Pet Scaling 01
+// 34903 - Hunter Pet Scaling 02
+// 34904 - Hunter Pet Scaling 03
+// 61017 - Hunter Pet Scaling 04
+class spell_hun_pet_scaling : public AuraScript
+{
+    PrepareAuraScript(spell_hun_pet_scaling);
+
+    bool Validate(SpellInfo const* /*spellInfo*/) override
+    {
+        if (!sSpellMgr->GetSpellInfo(SPELL_HUNTER_PET_SCALING_01) || !sSpellMgr->GetSpellInfo(SPELL_HUNTER_PET_SCALING_02) ||
+            !sSpellMgr->GetSpellInfo(SPELL_HUNTER_PET_SCALING_03) || !sSpellMgr->GetSpellInfo(SPELL_HUNTER_PET_SCALING_04))
+            return false;
+        return true;
+    }
+
+    void CalculateStatAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Unit* owner = GetUnitOwner()->GetOwner())
+        {
+            int32 mod = 45;
+            float ownerStamina = owner->GetStat(STAT_STAMINA);
+
+            // Wild Hunt
+            if (AuraEffect* aurEff = GetUnitOwner()->GetDummyAuraEffect(SPELLFAMILY_PET, SPELL_ICON_WILD_HUNT, EFFECT_0))
+                AddPct(mod, aurEff->GetAmount());
+
+            amount = CalculatePct(std::max<int32>(0, ownerStamina), mod);
+        }
+    }
+
+    void CalculateAPAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Unit* owner = GetUnitOwner()->GetOwner())
+        {
+            int32 mod = 22;
+            float ownerAP = owner->GetTotalAttackPowerValue(RANGED_ATTACK);
+
+            // Wild Hunt
+            if (AuraEffect* aurEff = GetUnitOwner()->GetDummyAuraEffect(SPELLFAMILY_PET, SPELL_ICON_WILD_HUNT, EFFECT_1))
+                AddPct(mod, aurEff->GetAmount());
+
+            // Hunter vs. Wild
+            if (AuraEffect* aurEff = owner->GetAuraEffect(SPELL_AURA_MOD_ATTACK_POWER_OF_STAT_PERCENT, SPELLFAMILY_HUNTER, SPELL_ICON_HUNTER_VS_WILD, EFFECT_0))
+                ownerAP += CalculatePct(owner->GetStat(STAT_STAMINA), aurEff->GetAmount());
+
+            // Animal Handler
+            if (AuraEffect* aurEff = owner->GetDummyAuraEffect(SPELLFAMILY_HUNTER, SPELL_ICON_ANIMAL_HANDLER, EFFECT_1))
+                AddPct(mod, aurEff->GetAmount());
+
+            amount = CalculatePct(std::max<int32>(0, ownerAP), mod);
+        }
+    }
+
+    void CalculateSPAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Unit* owner = GetUnitOwner()->GetOwner())
+        {
+            float mod = 12.87f;
+            float ownerAP = owner->GetTotalAttackPowerValue(RANGED_ATTACK);
+
+            // Wild Hunt
+            if (AuraEffect* aurEff = GetUnitOwner()->GetDummyAuraEffect(SPELLFAMILY_PET, SPELL_ICON_WILD_HUNT, EFFECT_1))
+                AddPct(mod, aurEff->GetAmount());
+
+            amount = CalculatePct(std::max<int32>(0, ownerAP), mod);
+
+            if (owner->GetTypeId() == TYPEID_PLAYER)
+                owner->SetUInt32Value(PLAYER_PET_SPELL_POWER, (uint32)amount);
+        }
+    }
+
+    void CalculateResistanceAmount(AuraEffect const* aurEff, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Unit* owner = GetUnitOwner()->GetOwner())
+        {
+            SpellSchoolMask schoolMask = SpellSchoolMask(aurEff->GetMiscValue());
+            // 35% for Armor and 40% for Magic Resistance
+            int32 mod = schoolMask == SPELL_SCHOOL_MASK_NORMAL ? 35 : 40;
+
+            float ownerResistance = owner->GetResistance(schoolMask);
+
+            amount = CalculatePct(std::max<int32>(0, ownerResistance), mod);
+        }
+    }
+
+    int32 CalculatePercent(float hitChance, float cap, float maxChance)
+    {
+        return (hitChance / cap) * maxChance;
+    }
+
+    void CalculateHitAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Player* modOwner = GetUnitOwner()->GetSpellModOwner())
+            amount = CalculatePercent(modOwner->m_modRangedHitChance, 8.0f, 8.0f);
+    }
+
+    void CalculateSpellHitAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Player* modOwner = GetUnitOwner()->GetSpellModOwner())
+            amount = CalculatePercent(modOwner->m_modRangedHitChance, 8.0f, 17.0f);
+    }
+
+    void CalculateExpertiseAmount(AuraEffect const* /*aurEff*/, int32& amount, bool& /*canBeRecalculated*/)
+    {
+        if (Player* modOwner = GetUnitOwner()->GetSpellModOwner())
+            amount = CalculatePercent(modOwner->m_modRangedHitChance, 8.0f, 26.0f);
+    }
+
+    void CalcPeriodic(AuraEffect const* /*aurEff*/, bool& isPeriodic, int32& amplitude)
+    {
+        isPeriodic = true;
+        amplitude = 2 * IN_MILLISECONDS;
+    }
+
+    void HandlePeriodic(AuraEffect const* aurEff)
+    {
+        PreventDefaultAction();
+        if (aurEff->GetAuraType() == SPELL_AURA_MOD_STAT && (aurEff->GetMiscValue() == STAT_STAMINA || aurEff->GetMiscValue() == STAT_INTELLECT))
+        {
+            int32 currentAmount = aurEff->GetAmount();
+            int32 newAmount = GetEffect(aurEff->GetEffIndex())->CalculateAmount(GetCaster());
+            if (newAmount != currentAmount)
+            {
+                if (aurEff->GetMiscValue() == STAT_STAMINA)
+                {
+                    uint32 actStat = GetUnitOwner()->GetHealth();
+                    GetEffect(aurEff->GetEffIndex())->ChangeAmount(newAmount, false);
+                    GetUnitOwner()->SetHealth(std::min<uint32>(GetUnitOwner()->GetMaxHealth(), actStat));
+                }
+                else
+                {
+                    uint32 actStat = GetUnitOwner()->GetPower(POWER_MANA);
+                    GetEffect(aurEff->GetEffIndex())->ChangeAmount(newAmount, false);
+                    GetUnitOwner()->SetPower(POWER_MANA, std::min<uint32>(GetUnitOwner()->GetMaxPower(POWER_MANA), actStat));
+                }
+            }
+        }
+        else
+            GetEffect(aurEff->GetEffIndex())->RecalculateAmount();
+    }
+
+    void Register() override
+    {
+        if (m_scriptSpellId == SPELL_HUNTER_PET_SCALING_01)
+        {
+            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_pet_scaling::CalculateStatAmount, EFFECT_ALL, SPELL_AURA_MOD_STAT);
+            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_pet_scaling::CalculateAPAmount, EFFECT_ALL, SPELL_AURA_MOD_ATTACK_POWER);
+            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_pet_scaling::CalculateSPAmount, EFFECT_ALL, SPELL_AURA_MOD_DAMAGE_DONE);
+        }
+        else if (m_scriptSpellId == SPELL_HUNTER_PET_SCALING_04)
+        {
+            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_pet_scaling::CalculateHitAmount, EFFECT_0, SPELL_AURA_MOD_HIT_CHANCE);
+            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_pet_scaling::CalculateSpellHitAmount, EFFECT_1, SPELL_AURA_MOD_SPELL_HIT_CHANCE);
+            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_pet_scaling::CalculateExpertiseAmount, EFFECT_2, SPELL_AURA_MOD_EXPERTISE);
+        }
+        else
+        {
+            DoEffectCalcAmount += AuraEffectCalcAmountFn(spell_hun_pet_scaling::CalculateResistanceAmount, EFFECT_ALL, SPELL_AURA_MOD_RESISTANCE);
+        }
+
+        DoEffectCalcPeriodic += AuraEffectCalcPeriodicFn(spell_hun_pet_scaling::CalcPeriodic, EFFECT_ALL, SPELL_AURA_ANY);
+        OnEffectPeriodic += AuraEffectPeriodicFn(spell_hun_pet_scaling::HandlePeriodic, EFFECT_ALL, SPELL_AURA_ANY);
+    }
+};
+
 void AddSC_hunter_spell_scripts()
 {
     RegisterSpellScript(spell_hun_aspect_of_the_beast);
@@ -1401,4 +1578,5 @@ void AddSC_hunter_spell_scripts()
     RegisterSpellScript(spell_hun_t9_4p_bonus);
     RegisterSpellScript(spell_hun_viper_attack_speed);
     RegisterSpellScript(spell_hun_wyvern_sting);
+    RegisterSpellScript(spell_hun_pet_scaling);
 }
