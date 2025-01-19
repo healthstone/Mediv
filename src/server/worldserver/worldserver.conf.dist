@@ -2787,14 +2787,14 @@ Battleground.ReportAFK = 3
 #         Default:     0 - (Disabled)
 #                      1 - (Enabled, Experimental as in incomplete, bugged and with crashes)
 
-Wintergrasp.Enable = 0
+Wintergrasp.Enable = 1
 
 #
 #     Wintergrasp.PlayerMax
 #         Description: Maximum number of players allowed in Wintergrasp.
 #         Default:     100
 
-Wintergrasp.PlayerMax = 100
+Wintergrasp.PlayerMax = 160
 
 #
 #     Wintergrasp.PlayerMin

@@ -22,58 +22,55 @@
 #include "Player.h"
 #include "ScriptMgr.h"
 
-BattlefieldMgr::BattlefieldMgr()
-{
+BattlefieldMgr::BattlefieldMgr() {
     _updateTimer = 0;
 }
 
-BattlefieldMgr::~BattlefieldMgr()
-{
-    for (BattlefieldSet::iterator itr = _battlefieldSet.begin(); itr != _battlefieldSet.end(); ++itr)
-        delete *itr;
+BattlefieldMgr::~BattlefieldMgr() {
+    for (auto itr: _battlefieldSet)
+        delete itr;
+    _battlefieldSet.clear();
 
+    for (auto itr: _battlefieldMap) {
+        if (itr.second)
+            itr.second = nullptr;
+    }
     _battlefieldMap.clear();
 }
 
-BattlefieldMgr* BattlefieldMgr::instance()
-{
+BattlefieldMgr *BattlefieldMgr::instance() {
     static BattlefieldMgr instance;
     return &instance;
 }
 
-void BattlefieldMgr::InitBattlefield()
-{
+void BattlefieldMgr::InitBattlefield() {
     uint32 oldMSTime = getMSTime();
 
     uint32 count = 0;
 
-    if (QueryResult result = WorldDatabase.Query("SELECT TypeId, ScriptName FROM battlefield_template"))
-    {
-        do
-        {
-            Field* fields = result->Fetch();
+    if (QueryResult result = WorldDatabase.Query("SELECT TypeId, ScriptName FROM battlefield_template")) {
+        do {
+            Field *fields = result->Fetch();
 
             uint32 typeId = fields[0].GetUInt8();
 
-            if (typeId >= BATTLEFIELD_MAX)
-            {
-                TC_LOG_ERROR("sql.sql", "BattlefieldMgr::InitBattlefield: Invalid TypeId value {} in battlefield_template, skipped.", typeId);
+            if (typeId >= BATTLEFIELD_MAX) {
+                TC_LOG_ERROR("sql.sql",
+                             "BattlefieldMgr::InitBattlefield: Invalid TypeId value {} in battlefield_template, skipped.",
+                             typeId);
                 continue;
             }
 
             uint32 scriptId = sObjectMgr->GetScriptId(fields[1].GetString());
 
-            Battlefield* bf = sScriptMgr->CreateBattlefield(scriptId);
+            Battlefield *bf = sScriptMgr->CreateBattlefield(scriptId);
             if (!bf)
                 continue;
 
-            if (!bf->SetupBattlefield())
-            {
+            if (!bf->SetupBattlefield()) {
                 TC_LOG_INFO("bg.battlefield", "Setting up battlefield with TypeId {} failed.", typeId);
                 delete bf;
-            }
-            else
-            {
+            } else {
                 _battlefieldSet.push_back(bf);
                 TC_LOG_INFO("bg.battlefield", "Setting up battlefield with TypeId {} succeeded.", typeId);
             }
@@ -85,28 +82,26 @@ void BattlefieldMgr::InitBattlefield()
     TC_LOG_INFO("server.loading", ">> Loaded {} battlefields in {} ms", count, GetMSTimeDiffToNow(oldMSTime));
 }
 
-void BattlefieldMgr::AddZone(uint32 zoneId, Battlefield* bf)
-{
+void BattlefieldMgr::AddZone(uint32 zoneId, Battlefield *bf) {
     _battlefieldMap[zoneId] = bf;
 }
 
-void BattlefieldMgr::HandlePlayerEnterZone(Player* player, uint32 zoneId)
-{
-    BattlefieldMap::iterator itr = _battlefieldMap.find(zoneId);
+void BattlefieldMgr::HandlePlayerEnterZone(Player *player, uint32 zoneId) {
+    auto const itr = _battlefieldMap.find(zoneId);
     if (itr == _battlefieldMap.end())
         return;
 
-    Battlefield* bf = itr->second;
+    Battlefield *bf = itr->second;
     if (!bf->IsEnabled() || bf->HasPlayer(player))
         return;
 
     bf->HandlePlayerEnterZone(player, zoneId);
-    TC_LOG_DEBUG("bg.battlefield", "Player {} entered battlefield id {}", player->GetGUID().ToString(), bf->GetTypeId());
+    TC_LOG_DEBUG("bg.battlefield", "Player {} entered battlefield id {}", player->GetGUID().ToString(),
+                 bf->GetTypeId());
 }
 
-void BattlefieldMgr::HandlePlayerLeaveZone(Player* player, uint32 zoneId)
-{
-    BattlefieldMap::iterator itr = _battlefieldMap.find(zoneId);
+void BattlefieldMgr::HandlePlayerLeaveZone(Player *player, uint32 zoneId) {
+    auto const itr = _battlefieldMap.find(zoneId);
     if (itr == _battlefieldMap.end())
         return;
 
@@ -115,14 +110,13 @@ void BattlefieldMgr::HandlePlayerLeaveZone(Player* player, uint32 zoneId)
         return;
 
     itr->second->HandlePlayerLeaveZone(player, zoneId);
-    TC_LOG_DEBUG("bg.battlefield", "Player {} left battlefield id {}", player->GetGUID().ToString(), itr->second->GetTypeId());
+    TC_LOG_DEBUG("bg.battlefield", "Player {} left battlefield id {}", player->GetGUID().ToString(),
+                 itr->second->GetTypeId());
 }
 
-Battlefield* BattlefieldMgr::GetBattlefieldToZoneId(uint32 zoneId)
-{
-    BattlefieldMap::iterator itr = _battlefieldMap.find(zoneId);
-    if (itr == _battlefieldMap.end())
-    {
+Battlefield *BattlefieldMgr::GetBattlefieldToZoneId(uint32 zoneId) const {
+    auto itr = _battlefieldMap.find(zoneId);
+    if (itr == _battlefieldMap.end()) {
         // no handle for this zone, return
         return nullptr;
     }
@@ -133,33 +127,33 @@ Battlefield* BattlefieldMgr::GetBattlefieldToZoneId(uint32 zoneId)
     return itr->second;
 }
 
-Battlefield* BattlefieldMgr::GetBattlefieldByBattleId(uint32 battleId)
-{
-    for (BattlefieldSet::iterator itr = _battlefieldSet.begin(); itr != _battlefieldSet.end(); ++itr)
-    {
-        if ((*itr)->GetBattleId() == battleId)
-            return *itr;
+Battlefield *BattlefieldMgr::GetBattlefieldByBattleId(uint32 battleId) const {
+    for (auto const itr: _battlefieldSet) {
+        if (itr->GetBattleId() == battleId)
+            return itr;
     }
     return nullptr;
 }
 
-ZoneScript* BattlefieldMgr::GetZoneScript(uint32 zoneId)
-{
-    BattlefieldMap::iterator itr = _battlefieldMap.find(zoneId);
+ZoneScript *BattlefieldMgr::GetZoneScript(uint32 zoneId) const {
+    auto itr = _battlefieldMap.find(zoneId);
     if (itr != _battlefieldMap.end())
         return itr->second;
 
     return nullptr;
 }
 
-void BattlefieldMgr::Update(uint32 diff)
-{
+void BattlefieldMgr::Update(uint32 diff) {
     _updateTimer += diff;
-    if (_updateTimer > BATTLEFIELD_OBJECTIVE_UPDATE_INTERVAL)
-    {
-        for (BattlefieldSet::iterator itr = _battlefieldSet.begin(); itr != _battlefieldSet.end(); ++itr)
-            if ((*itr)->IsEnabled())
-                (*itr)->Update(_updateTimer);
+    if (_updateTimer > BATTLEFIELD_OBJECTIVE_UPDATE_INTERVAL) {
+        for (auto const itr: _battlefieldSet)
+            if (itr->IsEnabled())
+                itr->Update(_updateTimer);
         _updateTimer = 0;
     }
+}
+
+void BattlefieldMgr::prepareDelete() {
+    for (auto const itr: _battlefieldSet)
+        itr->prepareDelete();
 }
