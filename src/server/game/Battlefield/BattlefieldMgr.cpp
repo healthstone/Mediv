@@ -31,8 +31,10 @@ BattlefieldMgr::~BattlefieldMgr() {
         delete itr;
     _battlefieldSet.clear();
 
-    for (auto itr: _battlefieldMap)
-        itr.second = nullptr;
+    for (auto itr: _battlefieldMap) {
+        if (itr.second)
+            itr.second = nullptr;
+    }
     _battlefieldMap.clear();
 }
 
