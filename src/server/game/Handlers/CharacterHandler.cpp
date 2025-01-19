@@ -16,6 +16,8 @@
  */
 
 #include "WorldSession.h"
+#include "AccountMgr.h"
+#include "AditionalData.h"
 #include "ArenaTeamMgr.h"
 #include "CalendarMgr.h"
 #include "CharacterCache.h"
@@ -581,11 +583,18 @@ void WorldSession::HandleCharCreateOpcode(WorldPacket& recvData)
                 newChar->setCinematic(1);                         // not show intro
 
             newChar->SetAtLoginFlag(AT_LOGIN_FIRST);              // First login
+            if (sWorld->customGetBoolConfig(CONFIG_PLAYER_FIRST_LOGIN_ACC_BONUS_ENABLED))
+            {
+                uint32 charCount = AccountMgr::GetCharactersCount(GetAccountId());
+
+                if (charCount <= sWorld->customGetIntConfig(CONFIG_MAX_CHARS_FOR_FIRST_LOGIN_ACC_BONUS))
+                    newChar->SetAtLoginFlag(AT_LOGIN_START_MONEY);  // First login with bonus
+            }
 
             CharacterDatabaseTransaction characterTransaction = CharacterDatabase.BeginTransaction();
             LoginDatabaseTransaction trans = LoginDatabase.BeginTransaction();
 
-                                                                  // Player created, save it now
+            // Player created, save it now
             newChar->SaveToDB(characterTransaction, true);
             createInfo->CharCount += 1;
 
@@ -971,6 +980,49 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
             }
             repMgr.SendState(nullptr);
         }
+
+        if (sWorld->customGetBoolConfig(CONFIG_PLAYER_AUTO_LEARN_ENABLED)) {
+            if (pCurrChar->GetClass() == CLASS_SHAMAN) {
+                // Totem of the Earthen Ring
+                ItemTemplate const* itemTemplate = sObjectMgr->GetItemTemplate(46978);
+                if (itemTemplate) {
+                    // Adding items
+                    int32 count = 1;
+                    uint32 noSpaceForCount = 0;
+
+                    // check space and find places
+                    ItemPosCountVec dest;
+                    InventoryResult msg = pCurrChar->CanStoreNewItem(NULL_BAG, NULL_SLOT, dest, 46978, count, &noSpaceForCount);
+                    if (msg != EQUIP_ERR_OK)                               // convert to possible store amount
+                        count -= noSpaceForCount;
+                    if (count != 0 && !dest.empty())                         // can't add any
+                    {
+                        Item* item = pCurrChar->StoreNewItem(dest, 46978, true, GenerateItemRandomPropertyId(46978));
+                        pCurrChar->SendNewItem(item, count, false, false);
+                    }
+                }
+            }
+        }
+    }
+
+    uint32 coins = AccountMgr::GetCoins(GetAccountId());
+    pCurrChar->GetAditionalData()->setCoins(coins);
+    pCurrChar->GetAditionalData()->LearnSpellFromAutoLearnSpells(pCurrChar->GetLevel());
+
+    if (pCurrChar->HasAtLoginFlag(AT_LOGIN_START_MONEY)) // moved from firstLogin - now we can set this Flag (512) from DB - characters.at_login
+    {
+        if (sWorld->customGetBoolConfig(CONFIG_PLAYER_FIRST_LOGIN_ACC_BONUS_ENABLED)) // if enabled plr will take a bonus
+        {
+            // here will script for adding money or something more
+            int32 moneybonus = sWorld->customGetIntConfig(CONFIG_BONUS_MONEY_FOR_FIRST_LOGIN_ACC_BONUS);
+
+            // send bonus announce
+            chH.PSendSysMessage(LANG_FIRST_LOGIN_ACC_MONEY_BONUS_ANNOUNCE, pCurrChar->GetName(), moneybonus / GOLD, (moneybonus%GOLD) / SILVER, moneybonus%SILVER);
+
+            pCurrChar->ModifyMoney(moneybonus);
+        }
+
+        pCurrChar->RemoveAtLoginFlag(AT_LOGIN_START_MONEY);
     }
 
     // show time before shutdown if shutdown planned.
@@ -982,6 +1034,21 @@ void WorldSession::HandlePlayerLogin(LoginQueryHolder const& holder)
 
     if (pCurrChar->IsGameMaster())
         SendNotification(LANG_GM_ON);
+
+    bool vip = AccountMgr::GetVipStatus(GetAccountId());
+    if (vip)
+    {
+        time_t unsetdate = AccountMgr::GetVIPunsetDate(GetAccountId());
+        if (GameTime::GetGameTime() > unsetdate)
+        {
+            vip = false;
+            AccountMgr::RemoveVipStatus(GetAccountId());
+            ChatHandler(pCurrChar->GetSession()).PSendSysMessage(pCurrChar->GetSession()->GetTrinityString(LANG_PLAYER_VIP_TIME_EXPIRED));
+        }
+        else
+            pCurrChar->GetAditionalData()->setPremiumUnsetdate(unsetdate);
+    }
+    pCurrChar->GetAditionalData()->setPremiumStatus(vip);
 
     std::string IP_str = GetRemoteAddress();
     TC_LOG_INFO("entities.player.character", "Account: {} (IP: {}) Login Character:[{}] {} Level: {}, XP: {}/{} ({} left)",
