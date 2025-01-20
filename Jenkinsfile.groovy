@@ -35,6 +35,7 @@ pipeline {
     post {
         always {
             script {
+                telegramSend(message: "MedivhEmu - BUILD-STATUS : ${currentBuild.result}. Report: ${url}", chatId: -4674187268)
                 String emoj = getEmoj(currentBuild.result)
                 rocketSend channel: '#wowemu', message: "MedivhEmu - BUILD-STATUS : ${currentBuild.result}. Report: ${url}", emoji: emoj, rawMessage: true
             }
