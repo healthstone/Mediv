@@ -21,7 +21,7 @@ jobs:
         cd /tmp/cppkafka/build
         cmake ..
         make
-        make install
+        sudo make install
     - name: Setup
       run: |
         mkdir bin
