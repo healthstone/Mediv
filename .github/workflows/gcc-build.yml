@@ -6,9 +6,22 @@ on:
 
 jobs:
   build:
-    runs-on: ghcr.io/healthstone/ubuntu-boost-kafka:latest
+    runs-on: ubuntu-22.04
     steps:
     - uses: actions/checkout@v2
+    - name: Dependencies
+      run: |
+        pwd
+        sudo apt-get update && sudo apt-get install -yq libboost-all-dev g++-11 git librdkafka-dev
+        sudo update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-11 100 --slave /usr/bin/g++ g++ /usr/bin/g++-11
+        cd /tmp
+        git clone https://github.com/mfontanini/cppkafka.git
+        cd /tmp/cppkafka
+        mkdir build
+        cd /tmp/cppkafka/build
+        cmake ..
+        make
+        make install
     - name: Setup
       run: |
         mkdir bin
