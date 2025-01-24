@@ -1,5 +1,6 @@
 #include "KafkaMgr.h"
 #include "Log.h"
+#include "World.h"
 
 KafkaMgr *KafkaMgr::instance() {
     static KafkaMgr instance;
