@@ -6,8 +6,9 @@ on:
 
 jobs:
   build:
-    runs-on: qvipka/ubuntu-boost-kafka
+    runs-on: ghcr.io/healthstone/ubuntu-boost-kafka:latest
     steps:
+    - uses: actions/checkout@v2
     - name: Setup
       run: |
         mkdir bin
