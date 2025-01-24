@@ -3071,6 +3071,35 @@ SOAP.IP = "127.0.0.1"
 SOAP.Port = 7878
 
 #
+#    KafkaBroker.Enable
+#        Description: Enable KafkaBroker service.
+#        Default:     0 - (Disabled)
+#                     1 - (Enabled)
+
+KafkaBroker.Enabled = 0
+
+#
+#    KafkaBroker.IP
+#        Description: Bind KafkaBroker service to IP/hostname.
+#        Default:     "127.0.0.1:9092" - (Bind to localhost)
+
+KafkaBroker.IP = "127.0.0.1:9092"
+
+#
+#    KafkaBroker.CommandsTopic
+#        Description: topicname to reach the KafkaBroker service with commands.
+#        Default:     "TOPIC_COMMANDS_NAME"
+
+KafkaBroker.CommandsTopic = "TOPIC_COMMANDS_NAME"
+
+#
+#    KafkaBroker.ExternalMailTopic
+#        Description: topicname to reach the KafkaBroker service with external mails.
+#        Default:     "TOPIC_COMMANDS_NAME"
+
+KafkaBroker.ExternalMailTopic = "TOPIC_EXTERNALMAIL_NAME"
+
+#
 ###################################################################################################
 
 ###################################################################################################

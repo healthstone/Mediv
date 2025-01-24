@@ -51,6 +51,7 @@
 #include "SecretMgr.h"
 #include "SharedDefines.h"
 #include "TCSoap.h"
+#include "KafkaBroker.h"
 #include "ThreadPool.h"
 #include "World.h"
 #include "WorldSocket.h"
@@ -345,6 +346,21 @@ extern int main(int argc, char** argv)
     {
         soapThread.reset(new std::thread(TCSoapThread, sConfigMgr->GetStringDefault("SOAP.IP", "127.0.0.1"), uint16(sConfigMgr->GetIntDefault("SOAP.Port", 7878))),
             [](std::thread* thr)
+        {
+            thr->join();
+            delete thr;
+        });
+    }
+
+    // Start kafka serving thread if enabled
+    std::shared_ptr<std::thread> kafkaThread;
+    if (sConfigMgr->GetBoolDefault("KafkaBroker.Enabled", false))
+    {
+        kafkaThread.reset(new std::thread(KafkaBrokerThread,
+                                          sConfigMgr->GetStringDefault("KafkaBroker.IP", "127.0.0.1:9092"),
+                                          sConfigMgr->GetStringDefault("KafkaBroker.CommandsTopic", "TOPIC_COMMANDS_NAME"),
+                                          sConfigMgr->GetStringDefault("KafkaBroker.ExternalMailTopic", "TOPIC_EXTERNALMAIL_NAME")),
+        [](std::thread* thr)
         {
             thr->join();
             delete thr;

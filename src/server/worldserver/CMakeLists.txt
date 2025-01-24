@@ -45,6 +45,8 @@ endif()
 
 set_target_properties(worldserver PROPERTIES LINK_FLAGS "${worldserver_LINK_FLAGS}")
 
+find_package(CppKafka REQUIRED)
+
 target_link_libraries(worldserver
   PRIVATE
     trinity-core-interface
@@ -52,7 +54,8 @@ target_link_libraries(worldserver
     scripts
     game
     gsoap
-    readline)
+    readline
+    CppKafka::cppkafka)
 
 CollectIncludeDirectories(
   ${CMAKE_CURRENT_SOURCE_DIR}

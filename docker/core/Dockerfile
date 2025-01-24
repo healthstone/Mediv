@@ -1,9 +1,4 @@
-FROM ubuntu:22.04
-
-RUN apt-get update
-RUN apt-get install git clang cmake make gcc g++ libmysqlclient-dev libssl-dev libbz2-dev libreadline-dev libncurses-dev libboost-all-dev p7zip mysql-client -yq
-RUN update-alternatives --install /usr/bin/cc cc /usr/bin/clang 100
-RUN update-alternatives --install /usr/bin/c++ c++ /usr/bin/clang 100
+FROM qvipka/ubuntu-boost-kafka:latest
 
 RUN mkdir /sources && mkdir /application
 
