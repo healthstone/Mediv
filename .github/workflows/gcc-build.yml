@@ -9,6 +9,9 @@ jobs:
     runs-on: ghcr.io/healthstone/ubuntu-boost-kafka:latest
     steps:
     - uses: actions/checkout@v2
+    - name: Dependencies
+      run: |
+        echo "all deps ready"
     - name: Setup
       run: |
         mkdir bin
