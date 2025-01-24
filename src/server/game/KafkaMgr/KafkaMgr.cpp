@@ -28,7 +28,7 @@ void KafkaMgr::handleCommandWithError(std::string const &command) {
 }
 
 void KafkaMgr::handleExternalMail(std::string const &command) {
-    TC_LOG_ERROR("server.worldserver", "RECEIVED externalMail from KAFKA: {}", command);
+    TC_LOG_INFO("server.worldserver", "RECEIVED externalMail from KAFKA: {}", command);
 }
 
 void KafkaMgr::handleExternalMailWithError(std::string const &command) {
