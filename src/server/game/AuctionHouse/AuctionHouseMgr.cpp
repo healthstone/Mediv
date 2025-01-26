@@ -41,12 +41,13 @@ enum eAuctionHouse
     AH_MINIMUM_DEPOSIT = 100
 };
 
-AuctionHouseMgr::AuctionHouseMgr() { }
+AuctionHouseMgr::AuctionHouseMgr() = default;
 
 AuctionHouseMgr::~AuctionHouseMgr()
 {
-    for (ItemMap::iterator itr = mAitems.begin(); itr != mAitems.end(); ++itr)
-        delete itr->second;
+    for (auto itr: mAitems)
+        delete itr.second;
+    mAitems.clear();
 }
 
 AuctionHouseMgr* AuctionHouseMgr::instance()
@@ -189,7 +190,7 @@ void AuctionHouseMgr::SendAuctionWonMail(AuctionEntry* auction, CharacterDatabas
     }
 }
 
-void AuctionHouseMgr::SendAuctionSalePendingMail(AuctionEntry* auction, CharacterDatabaseTransaction trans)
+void AuctionHouseMgr::SendAuctionSalePendingMail(AuctionEntry* auction)
 {
     ObjectGuid owner_guid(HighGuid::Player, auction->owner);
     Player* owner = ObjectAccessor::FindConnectedPlayer(owner_guid);
@@ -209,7 +210,7 @@ void AuctionHouseMgr::SendAuctionSalePendingMail(AuctionEntry* auction, Characte
 }
 
 //call this method to send mail to auction owner, when auction is successful, it does not clear ram
-void AuctionHouseMgr::SendAuctionSuccessfulMail(AuctionEntry* auction, CharacterDatabaseTransaction trans)
+void AuctionHouseMgr::SendAuctionSuccessfulMail(AuctionEntry* auction)
 {
     ObjectGuid owner_guid(HighGuid::Player, auction->owner);
     Player* owner = ObjectAccessor::FindConnectedPlayer(owner_guid);
@@ -264,7 +265,7 @@ void AuctionHouseMgr::SendAuctionExpiredMail(AuctionEntry* auction, CharacterDat
 }
 
 //this function sends mail to old bidder
-void AuctionHouseMgr::SendAuctionOutbiddedMail(AuctionEntry* auction, uint32 newPrice, Player* newBidder, CharacterDatabaseTransaction trans)
+void AuctionHouseMgr::SendAuctionOutbiddedMail(AuctionEntry* auction, uint32 newPrice, Player* newBidder)
 {
     ObjectGuid oldBidder_guid(HighGuid::Player, auction->bidder);
     Player* oldBidder = ObjectAccessor::FindConnectedPlayer(oldBidder_guid);
@@ -284,7 +285,7 @@ void AuctionHouseMgr::SendAuctionOutbiddedMail(AuctionEntry* auction, uint32 new
 }
 
 //this function sends mail, when auction is cancelled to old bidder
-void AuctionHouseMgr::SendAuctionCancelledToBidderMail(AuctionEntry* auction, CharacterDatabaseTransaction trans)
+void AuctionHouseMgr::SendAuctionCancelledToBidderMail(AuctionEntry* auction)
 {
     ObjectGuid bidder_guid = ObjectGuid(HighGuid::Player, auction->bidder);
     Player* bidder = ObjectAccessor::FindConnectedPlayer(bidder_guid);
@@ -305,9 +306,8 @@ void AuctionHouseMgr::LoadAuctionItems()
     // need to clear in case we are reloading
     if (!mAitems.empty())
     {
-        for (ItemMap::iterator itr = mAitems.begin(); itr != mAitems.end(); ++itr)
-            delete itr->second;
-
+        for (auto itr: mAitems)
+            delete itr.second;
         mAitems.clear();
     }
 
@@ -391,7 +391,7 @@ void AuctionHouseMgr::LoadAuctions()
     {
         Field* fields = resultAuctions->Fetch();
 
-        AuctionEntry* aItem = new AuctionEntry();
+        auto* aItem = new AuctionEntry();
         if (!aItem->LoadFromDB(fields))
         {
             aItem->DeleteFromDB(trans);
@@ -421,7 +421,7 @@ void AuctionHouseMgr::AddAItem(Item* it)
 
 bool AuctionHouseMgr::RemoveAItem(ObjectGuid::LowType id, bool deleteItem /*= false*/, CharacterDatabaseTransaction* trans /*= nullptr*/)
 {
-    ItemMap::iterator i = mAitems.find(id);
+    auto i = mAitems.find(id);
     if (i == mAitems.end())
         return false;
 
@@ -619,13 +619,16 @@ void AuctionHouseObject::Update()
         return;
 
     // Clear expired throttled players
-    for (PlayerGetAllThrottleMap::const_iterator itr = GetAllThrottleMap.begin(); itr != GetAllThrottleMap.end();)
+    std::vector<ObjectGuid> removeVector;
+    for (auto const itr: GetAllThrottleMap)
     {
-        if (itr->second <= curTime)
-            itr = GetAllThrottleMap.erase(itr);
-        else
-            ++itr;
+        if (itr.second <= curTime)
+            removeVector.push_back(itr.first);
     }
+
+    for (auto const itr: removeVector)
+        GetAllThrottleMap.erase(itr);
+    removeVector.clear();
 
     CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
 
@@ -652,7 +655,7 @@ void AuctionHouseObject::Update()
             //we should send an "item sold" message if the seller is online
             //we send the item to the winner
             //we send the money to the seller
-            sAuctionMgr->SendAuctionSuccessfulMail(auction, trans);
+            sAuctionMgr->SendAuctionSuccessfulMail(auction);
             sAuctionMgr->SendAuctionWonMail(auction, trans);
             sScriptMgr->OnAuctionSuccessful(this, auction);
         }

@@ -515,7 +515,7 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket& recvData)
             else
             {
                 // mail to last bidder and return money
-                sAuctionMgr->SendAuctionOutbiddedMail(auction, price, GetPlayer(), trans);
+                sAuctionMgr->SendAuctionOutbiddedMail(auction, price, GetPlayer());
                 player->ModifyMoney(-int32(price));
             }
         }
@@ -559,7 +559,7 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket& recvData)
         {
             player->ModifyMoney(-int32(auction->buyout));
             if (auction->bidder)                          //buyout for bidded auction ..
-                sAuctionMgr->SendAuctionOutbiddedMail(auction, auction->buyout, GetPlayer(), trans);
+                sAuctionMgr->SendAuctionOutbiddedMail(auction, auction->buyout, GetPlayer());
         }
         auction->bidder = player->GetGUID().GetCounter();
         auction->bid = auction->buyout;
@@ -571,8 +571,8 @@ void WorldSession::HandleAuctionPlaceBid(WorldPacket& recvData)
         GetPlayer()->UpdateAchievementCriteria(ACHIEVEMENT_CRITERIA_TYPE_HIGHEST_AUCTION_BID, auction->buyout);
 
         //- Mails must be under transaction control too to prevent data loss
-        sAuctionMgr->SendAuctionSalePendingMail(auction, trans);
-        sAuctionMgr->SendAuctionSuccessfulMail(auction, trans);
+        sAuctionMgr->SendAuctionSalePendingMail(auction);
+        sAuctionMgr->SendAuctionSuccessfulMail(auction);
         sAuctionMgr->SendAuctionWonMail(auction, trans);
 
         SendAuctionCommandResult(auction->Id, AUCTION_PLACE_BID, ERR_AUCTION_OK);
@@ -631,7 +631,7 @@ void WorldSession::HandleAuctionRemoveItem(WorldPacket& recvData)
                 if (!player->HasEnoughMoney(auctionCut))          //player doesn't have enough money, maybe message needed
                     return;
                 //some auctionBidderNotification would be needed, but don't know that parts..
-                sAuctionMgr->SendAuctionCancelledToBidderMail(auction, trans);
+                sAuctionMgr->SendAuctionCancelledToBidderMail(auction);
                 player->ModifyMoney(-int32(auctionCut));
             }
 
