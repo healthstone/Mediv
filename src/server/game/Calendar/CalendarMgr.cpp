@@ -16,6 +16,7 @@
  */
 
 #include "CalendarMgr.h"
+#include "AditionalData.h"
 #include "CalendarPackets.h"
 #include "CharacterCache.h"
 #include "DatabaseEnv.h"
@@ -23,7 +24,7 @@
 #include "Guild.h"
 #include "GuildMgr.h"
 #include "Log.h"
-#include "Mail.h"
+#include "MailMgr.h"
 #include "MapUtils.h"
 #include "ObjectAccessor.h"
 #include "Player.h"
@@ -200,8 +201,11 @@ void CalendarMgr::RemoveEvent(CalendarEvent* calendarEvent, ObjectGuid remover)
         // When an event is deleted, all invited (accepted/declined? - verify) guildies are notified via in-game mail. (wowwiki)
         if (!remover.IsEmpty() && invite->GetInviteeGUID() != remover)
         {
-            MailDraft mail(calendarEvent->BuildCalendarMailSubject(remover), calendarEvent->BuildCalendarMailBody(ObjectAccessor::FindConnectedPlayer(invite->GetInviteeGUID())));
-            mail.SendMailTo(trans, MailReceiver(invite->GetInviteeGUID().GetCounter()), calendarEvent, MAIL_CHECK_MASK_COPIED);
+            if (Player* premover = ObjectAccessor::FindConnectedPlayer(invite->GetInviteeGUID()))
+            {
+                if (sMailMgr->GetMailBoxSize(invite->GetInviteeGUID()) + premover->GetAditionalData()->getAuctionLotsCount() < sWorld->customGetIntConfig(CONFIG_ANTISPAM_MAIL_COUNT_CONTROLLER))
+                    sMailMgr->SendMailByCalendarEvent(calendarEvent, invite->GetInviteeGUID().GetCounter(), calendarEvent->BuildCalendarMailSubject(remover), calendarEvent->BuildCalendarMailBody(premover), 0, MAIL_CHECK_MASK_COPIED);
+            }
         }
 
         delete invite;
