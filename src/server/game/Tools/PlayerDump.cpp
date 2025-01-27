@@ -35,7 +35,6 @@ enum GuidType : uint8
     GUID_TYPE_ACCOUNT,
     GUID_TYPE_CHAR,
     GUID_TYPE_PET,
-    GUID_TYPE_MAIL,
     GUID_TYPE_ITEM,
 
     // 64 bit long guids
@@ -73,7 +72,6 @@ struct BaseTable
 BaseTable const BaseTables[] =
 {
     { "character_pet",           "id",      "owner",      GUID_TYPE_PET           },
-    { "mail",                    "id",      "receiver",   GUID_TYPE_MAIL          },
     { "item_instance",           "guid",    "owner_guid", GUID_TYPE_ITEM          },
 
     { "character_equipmentsets", "setguid", "guid",       GUID_TYPE_EQUIPMENT_SET }
@@ -112,8 +110,6 @@ DumpTable const DumpTables[] =
     { "character_spell",                DTT_CHAR_TABLE   },
     { "character_spell_cooldown",       DTT_CHAR_TABLE   },
     { "character_talent",               DTT_CHAR_TABLE   },
-    { "mail",                           DTT_MAIL         },
-    { "mail_items",                     DTT_MAIL_ITEM    }, // must be after mail
     { "pet_aura",                       DTT_PET_TABLE    }, // must be after character_pet
     { "pet_spell",                      DTT_PET_TABLE    }, // must be after character_pet
     { "pet_spell_cooldown",             DTT_PET_TABLE    }, // must be after character_pet
@@ -315,19 +311,6 @@ void PlayerDump::InitializeTables()
                 MarkDependentColumn(t, "guid", GUID_TYPE_CHAR);
                 MarkDependentColumn(t, "bag", GUID_TYPE_ITEM);
                 MarkDependentColumn(t, "item", GUID_TYPE_ITEM);
-                break;
-            case DTT_MAIL:
-                MarkWhereField(t, "receiver");
-
-                MarkDependentColumn(t, "id", GUID_TYPE_MAIL);
-                MarkDependentColumn(t, "receiver", GUID_TYPE_CHAR);
-                break;
-            case DTT_MAIL_ITEM:
-                MarkWhereField(t, "mail_id");
-
-                MarkDependentColumn(t, "mail_id", GUID_TYPE_MAIL);
-                MarkDependentColumn(t, "item_guid", GUID_TYPE_ITEM);
-                MarkDependentColumn(t, "receiver", GUID_TYPE_CHAR);
                 break;
             case DTT_ITEM:
                 MarkWhereField(t, "guid");
@@ -596,7 +579,6 @@ void PlayerDumpWriter::PopulateGuids(ObjectGuid::LowType guid)
         switch (baseTable.StoredType)
         {
             case GUID_TYPE_ITEM:
-            case GUID_TYPE_MAIL:
             case GUID_TYPE_PET:
             case GUID_TYPE_EQUIPMENT_SET:
                 break;
@@ -616,10 +598,6 @@ void PlayerDumpWriter::PopulateGuids(ObjectGuid::LowType guid)
                 case GUID_TYPE_ITEM:
                     if (ObjectGuid::LowType itemLowGuid = (*result)[0].GetUInt32())
                         _items.insert(itemLowGuid);
-                    break;
-                case GUID_TYPE_MAIL:
-                    if (ObjectGuid::LowType mailLowGuid = (*result)[0].GetUInt32())
-                        _mails.insert(mailLowGuid);
                     break;
                 case GUID_TYPE_PET:
                     if (ObjectGuid::LowType petLowGuid = (*result)[0].GetUInt32())
@@ -653,12 +631,6 @@ bool PlayerDumpWriter::AppendTable(StringTransaction& trans, ObjectGuid::LowType
                 return true;
 
             whereStr = GenerateWhereStr(tableStruct.WhereFieldName, _pets);
-            break;
-        case DTT_MAIL_ITEM:
-            if (_mails.empty())
-                return true;
-
-            whereStr = GenerateWhereStr(tableStruct.WhereFieldName, _mails);
             break;
         case DTT_EQSET_TABLE:
             if (_itemSets.empty())
@@ -806,9 +778,6 @@ DumpReturn PlayerDumpReader::LoadDump(std::istream& input, uint32 account, std::
     std::map<ObjectGuid::LowType, ObjectGuid::LowType> items;
     ObjectGuid::LowType itemLowGuidOffset = sObjectMgr->GetGenerator<HighGuid::Item>().GetNextAfterMaxUsed();
 
-    std::map<ObjectGuid::LowType, ObjectGuid::LowType> mails;
-    ObjectGuid::LowType mailLowGuidOffset = sObjectMgr->_mailId;
-
     std::map<ObjectGuid::LowType, ObjectGuid::LowType> petIds;
     ObjectGuid::LowType petLowGuidOffset = sObjectMgr->_hiPetNumber;
 
@@ -889,10 +858,6 @@ DumpReturn PlayerDumpReader::LoadDump(std::istream& input, uint32 account, std::
                     if (!ChangeGuid(ts, line, field.FieldName, petIds, petLowGuidOffset))
                         return DUMP_FILE_BROKEN;
                     break;
-                case GUID_TYPE_MAIL:
-                    if (!ChangeGuid(ts, line, field.FieldName, mails, mailLowGuidOffset))
-                        return DUMP_FILE_BROKEN;
-                    break;
                 case GUID_TYPE_ITEM:
                     if (!ChangeGuid(ts, line, field.FieldName, items, itemLowGuidOffset, true))
                         return DUMP_FILE_BROKEN;
@@ -956,7 +921,6 @@ DumpReturn PlayerDumpReader::LoadDump(std::istream& input, uint32 account, std::
     sCharacterCache->AddCharacterCacheEntry(ObjectGuid(HighGuid::Player, guid), account, name, gender, race, playerClass, level);
 
     sObjectMgr->GetGenerator<HighGuid::Item>().Set(sObjectMgr->GetGenerator<HighGuid::Item>().GetNextAfterMaxUsed() + items.size());
-    sObjectMgr->_mailId += mails.size();
     sObjectMgr->_hiPetNumber += petIds.size();
     sObjectMgr->_equipmentSetGuid += equipmentSetIds.size();
 

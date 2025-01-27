@@ -235,7 +235,7 @@ void AuthSession::ReadHandler()
         if (packet.GetActiveSize() < size)
             break;
 
-        if (cmd == AUTH_LOGON_CHALLENGE || cmd == AUTH_RECONNECT_CHALLENGE)
+        if (cmd == AUTH_LOGON_CHALLENGE || cmd == AUTH_RECONNECT_CHALLENGE || cmd == REALM_LIST)
         {
             sAuthLogonChallenge_C* challenge = reinterpret_cast<sAuthLogonChallenge_C*>(packet.GetReadPointer());
             size += challenge->size;

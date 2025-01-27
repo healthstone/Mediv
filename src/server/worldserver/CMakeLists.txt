@@ -46,6 +46,7 @@ endif()
 set_target_properties(worldserver PROPERTIES LINK_FLAGS "${worldserver_LINK_FLAGS}")
 
 find_package(CppKafka REQUIRED)
+find_package(nlohmann_json REQUIRED)
 
 target_link_libraries(worldserver
   PRIVATE
@@ -55,7 +56,8 @@ target_link_libraries(worldserver
     game
     gsoap
     readline
-    CppKafka::cppkafka)
+    CppKafka::cppkafka
+    nlohmann_json::nlohmann_json)
 
 CollectIncludeDirectories(
   ${CMAKE_CURRENT_SOURCE_DIR}

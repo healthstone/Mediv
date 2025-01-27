@@ -83,8 +83,6 @@ enum ItemClass : uint8;
 enum LootError : uint8;
 enum LootType : uint8;
 
-typedef std::deque<Mail*> PlayerMails;
-
 #define PLAYER_MAX_SKILLS           128
 #define PLAYER_MAX_DAILY_QUESTS     25
 #define PLAYER_EXPLORED_ZONES_SIZE  128
@@ -1391,8 +1389,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         static void DeleteOldCharacters();
         static void DeleteOldCharacters(uint32 keepDays);
 
-        bool m_mailsUpdated;
-
         void SetBindPoint(ObjectGuid guid) const;
         void SendTalentWipeConfirm(ObjectGuid trainerGuid) const;
         void ResetPetTalents();
@@ -1425,14 +1421,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void UpdateNextMailTimeAndUnreads();
         void AddNewMailDeliverTime(time_t deliver_time);
 
-        void RemoveMail(uint32 id);
-
-        void AddMail(Mail* mail) { m_mail.push_front(mail);}// for call from WorldSession::SendMailTo
-        uint32 GetMailSize() { return m_mail.size();}
-        Mail* GetMail(uint32 id);
-
-        PlayerMails const& GetMails() const { return m_mail; }
-
         void SendItemRetrievalMail(uint32 itemEntry, uint32 count); // Item retrieval mails sent by The Postmaster (34337), used in multiple places.
 
         /*********************************************************/
@@ -1441,14 +1429,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
 
         uint8 unReadMails;
         time_t m_nextMailDelivereTime;
-
-        typedef std::unordered_map<uint32, Item*> ItemMap;
-
-        ItemMap mMitems;                                    //template defined in objectmgr.cpp
-
-        Item* GetMItem(uint32 id);
-        void AddMItem(Item* it);
-        bool RemoveMItem(uint32 id);
 
         void SendOnCancelExpectedVehicleRideAura() const;
         void PetSpellInitialize();
@@ -2294,8 +2274,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void _LoadGlyphAuras();
         void _LoadBoundInstances(PreparedQueryResult result);
         void _LoadInventory(PreparedQueryResult result, uint32 timeDiff);
-        void _LoadMail(PreparedQueryResult mailsResult, PreparedQueryResult mailItemsResult);
-        static Item* _LoadMailedItem(ObjectGuid const& playerGuid, Player* player, uint32 mailId, Mail* mail, Field* fields);
         void _LoadQuestStatus(PreparedQueryResult result);
         void _LoadQuestStatusRewarded(PreparedQueryResult result);
         void _LoadDailyQuestStatus(PreparedQueryResult result);
@@ -2322,7 +2300,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         void _SaveActions(CharacterDatabaseTransaction trans);
         void _SaveAuras(CharacterDatabaseTransaction trans);
         void _SaveInventory(CharacterDatabaseTransaction trans);
-        void _SaveMail(CharacterDatabaseTransaction trans);
         void _SaveQuestStatus(CharacterDatabaseTransaction trans);
         void _SaveDailyQuestStatus(CharacterDatabaseTransaction trans);
         void _SaveWeeklyQuestStatus(CharacterDatabaseTransaction trans);
@@ -2381,7 +2358,6 @@ class TC_GAME_API Player : public Unit, public GridObject<Player>
         uint32 m_GuildIdInvited;
         uint32 m_ArenaTeamIdInvited;
 
-        PlayerMails m_mail;
         PlayerSpellMap m_spells;
         uint32 m_lastPotionId;                              // last used health/mana potion in combat, that block next potion use
 
