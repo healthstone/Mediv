@@ -4,12 +4,8 @@
 #include "Item.h"
 #include "MailMgr.h"
 #include "ObjectMgr.h"
-#include "World.h"
 
-#include <nlohmann/json.hpp>
 #include <iostream>
-
-using json = nlohmann::json;
 
 KafkaMgr *KafkaMgr::instance() {
     static KafkaMgr instance;
@@ -37,70 +33,30 @@ void KafkaMgr::handleCommandWithError(std::string const &command) {
     TC_LOG_ERROR("server.worldserver", "RECEIVED UNHANDLED command from KAFKA: {}", command);
 }
 
-void KafkaMgr::handleExternalMail(std::string const &command) {
-    TC_LOG_INFO("server.worldserver", "RECEIVED externalMail from KAFKA: {}", command);
-
-    json data;
-    try {
-        data = json::parse(command);
-
-        /** Structure of json
-        {
-            "receiver_guid": 1,
-            "subject": "subject",
-            "body": "body",
-            "money": 1000000,
-            "items": [
-                {
-                  "itemId": 123,
-                  "itemCount": 1
+void KafkaMgr::handleExternalMail(uint32 const &receiver_guid, std::string const &subject, std::string const &body,
+                                  uint32 const &money, std::unordered_map<uint32, uint32> const &items) {
+    std::vector<Item *> itemVector;
+    if (!items.empty()) {
+        CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
+        for (auto const &itr: items) {
+            if (!sObjectMgr->GetItemTemplate(itr.first))
+                TC_LOG_ERROR("server.worldserver", "handleExternalMail::WRONG Item entry {} with count {}",
+                             itr.first,
+                             itr.second);
+            else {
+                if (Item *mailItem = Item::CreateItem(itr.first, itr.second)) {
+                    itemVector.push_back(mailItem);
+                    mailItem->SaveToDB(trans);
+                    TC_LOG_INFO("server.worldserver", "externalMail> Adding {} of item with id {} for player_id {}",
+                                itr.second, itr.first, receiver_guid);
                 }
-            ]
-        }
-        **/
-        if (data.contains("receiver_guid") && data.contains("subject") && data.contains("body") &&
-            data.contains("money")) {
-
-            uint32 receiver_guid = data.at("receiver_guid");
-            std::string subject = data.at("subject");
-            std::string body = data.at("body");
-            uint32 money = data.at("money");
-            std::vector<Item *> itemVector;
-
-            TC_LOG_INFO("server.worldserver", "RECEIVED externalMail subject: {} and  body: {}", subject, body);
-
-            if (data.contains("items") && data.at("items").is_array()) {
-                CharacterDatabaseTransaction trans = CharacterDatabase.BeginTransaction();
-
-                // iterate the array
-                for (json::iterator it = data.at("items").begin(); it != data.at("items").end(); ++it) {
-                    uint32 itemId = it->at("itemId");
-                    uint32 itemCount = it->at("itemCount");
-                    if (itemId) {
-                        if (!sObjectMgr->GetItemTemplate(itemId))
-                            TC_LOG_ERROR("server.worldserver", "RECEIVED WRONG Item entry {} with count {}", itemId,
-                                         itemCount);
-                        else {
-                            if (Item *mailItem = Item::CreateItem(itemId, itemCount)) {
-                                itemVector.push_back(mailItem);
-                                mailItem->SaveToDB(trans);
-                                TC_LOG_INFO("server.worldserver",
-                                            "externalMail> Adding {} of item with id {} for player_id {}", itemCount,
-                                            itemId, receiver_guid);
-                            }
-                        }
-                    }
-                }
-
-                CharacterDatabase.CommitTransaction(trans);
             }
-
-            sMailMgr->SendMailWithItemsByGUID(0, receiver_guid, MAIL_NORMAL, subject, body, money, itemVector);
-            itemVector.clear();
         }
-    } catch (json::parse_error &ex) {
-        TC_LOG_ERROR("server.worldserver", "RECEIVED WRONG externalMail: {}", ex.what());
+        CharacterDatabase.CommitTransaction(trans);
     }
+
+    sMailMgr->SendMailWithItemsByGUID(0, receiver_guid, MAIL_NORMAL, subject, body, money, itemVector);
+    itemVector.clear();
 }
 
 void KafkaMgr::handleExternalMailWithError(std::string const &command) {

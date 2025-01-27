@@ -3,21 +3,6 @@
 
 #include "Define.h"
 
-namespace ns {
-
-    struct externalMailItem {
-        int32 itemId;
-        int32 itemCount;
-    };
-
-    struct externalMail {
-        ObjectGuid::LowType receiver_guid;
-        std::string subject;
-        std::string body;
-        std::vector<externalMailItem> items;
-    };
-}
-
 class KafkaProcessCommand {
 public:
     KafkaProcessCommand() = default;
@@ -44,7 +29,9 @@ public:
 
     static void handleCommandWithError(std::string const &command);
 
-    static void handleExternalMail(std::string const &command);
+    static void handleExternalMail(uint32 const &receiver_guid, std::string const &subject,
+                                   std::string const &body,
+                                   uint32 const &money, std::unordered_map<uint32, uint32> const &items);
 
     static void handleExternalMailWithError(std::string const &command);
 };
