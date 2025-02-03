@@ -188,7 +188,7 @@ void WorldSession::HandleSendMail(WorldPackets::Mail::SendMailClient &sendMail) 
 
         // handle empty bag before CanBeTraded, since that func already has that check
         if (item->IsNotEmptyBag()) {
-            player->SendMailResult(0, MAIL_SEND, MAIL_ERR_EQUIP_ERROR, EQUIP_ERR_CAN_ONLY_DO_WITH_EMPTY_BAGS);
+            player->SendMailResult(0, MAIL_SEND, MAIL_ERR_EQUIP_ERROR, EQUIP_ERR_DESTROY_NONEMPTY_BAG);
             return;
         }
 
@@ -198,7 +198,7 @@ void WorldSession::HandleSendMail(WorldPackets::Mail::SendMailClient &sendMail) 
         }
 
         if (item->IsBoundAccountWide() && item->IsSoulBound() && GetAccountId() != receiverAccountId) {
-            player->SendMailResult(0, MAIL_SEND, MAIL_ERR_EQUIP_ERROR, EQUIP_ERR_ARTEFACTS_ONLY_FOR_OWN_CHARACTERS);
+            player->SendMailResult(0, MAIL_SEND, MAIL_ERR_EQUIP_ERROR, EQUIP_ERR_NOT_SAME_ACCOUNT);
             return;
         }
 
