@@ -39,6 +39,9 @@ if(NOT WIN32)
   )
 endif()
 
+find_package(CppKafka REQUIRED)
+find_package(nlohmann_json REQUIRED)
+
 target_link_libraries(worldserver
   PRIVATE
     trinity-core-interface
