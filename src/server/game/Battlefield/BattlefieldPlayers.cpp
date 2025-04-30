@@ -56,7 +56,7 @@ void Battlefield::RemovePlayer(Player *plr) {
 
 uint32 Battlefield::TeamSize(TeamId team) {
     uint32 result = 0;
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (itr.second->inWar && itr.second->team == team)
             result++;
     return result;
@@ -86,7 +86,7 @@ void Battlefield::UpdateZoneStatusInPlayerMap(Player *plr, bool inZone) {
 
 void Battlefield::InvitePlayersInZoneToQueue() {
     time_t futuretime = GameTime::GetGameTime() + m_TimeForAcceptInvite;
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (Player *player = ObjectAccessor::FindPlayer(itr.first))
             if (player->GetLevel() >= GetMinimalLevel() && !itr.second->inQueue && !itr.second->isWaitingQueue) {
                 itr.second->isWaitingQueue = true;
@@ -97,7 +97,7 @@ void Battlefield::InvitePlayersInZoneToQueue() {
 
 void Battlefield::InvitePlayersInQueueToWar() {
     time_t futuretime = GameTime::GetGameTime() + m_TimeForAcceptInvite;
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (itr.second->inQueue) {
             itr.second->isWaitingWar = true;
             itr.second->time = futuretime;
@@ -108,7 +108,7 @@ void Battlefield::InvitePlayersInQueueToWar() {
 
 void Battlefield::TryInvitePlayersNotInQueueToWarOrKickThem() {
     time_t futuretime = GameTime::GetGameTime() + m_TimeForAcceptInvite;
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (!itr.second->inQueue) {
             // time before be kicked or time for accept invite to war
             itr.second->time = futuretime;
@@ -344,7 +344,7 @@ void Battlefield::DoPlaySoundToAll(uint32 soundID) {
 }
 
 void Battlefield::BroadcastPacketToWar(WorldPacket const *data) const {
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (itr.second->inWar) {
             if (Player *player = ObjectAccessor::FindPlayer(itr.first))
                 player->SendDirectMessage(data);
@@ -352,7 +352,7 @@ void Battlefield::BroadcastPacketToWar(WorldPacket const *data) const {
 }
 
 void Battlefield::BroadcastPacketToZone(WorldPacket const *data) const {
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (itr.second->inZone) {
             if (Player *player = ObjectAccessor::FindPlayer(itr.first))
                 player->SendDirectMessage(data);
@@ -360,7 +360,7 @@ void Battlefield::BroadcastPacketToZone(WorldPacket const *data) const {
 }
 
 void Battlefield::BroadcastPacketToQueue(WorldPacket const *data) const {
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (itr.second->inQueue) {
             if (Player *player = ObjectAccessor::FindPlayer(itr.first))
                 player->SendDirectMessage(data);
@@ -368,7 +368,7 @@ void Battlefield::BroadcastPacketToQueue(WorldPacket const *data) const {
 }
 
 void Battlefield::TeamCastSpell(TeamId team, int32 spellId) {
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (itr.second->team == team) {
             if (Player *player = ObjectAccessor::FindPlayer(itr.first)) {
                 if (spellId > 0)
@@ -390,7 +390,7 @@ void Battlefield::SendInitWorldStatesTo(Player *player) {
 }
 
 void Battlefield::SendUpdateWorldState(uint32 field, uint32 value) {
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (Player *player = ObjectAccessor::FindPlayer(itr.first))
             player->SendUpdateWorldState(field, value);
 }

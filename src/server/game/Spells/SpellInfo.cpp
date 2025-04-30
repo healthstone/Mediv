@@ -1130,7 +1130,7 @@ bool SpellInfo::IsShadowMeld() const
            && HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS)
            && HasAttribute(SPELL_ATTR2_NOT_NEED_SHAPESHIFT)
            && HasAttribute(SPELL_ATTR2_FAIL_ON_ALL_TARGETS_IMMUNE)
-           && HasAttribute(SPELL_ATTR3_CAN_PROC_WITH_TRIGGERED);
+           && HasAttribute(SPELL_ATTR3_CAN_PROC_FROM_PROCS);
 }
 
 bool SpellInfo::IsPassive() const

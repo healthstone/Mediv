@@ -5513,7 +5513,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
                     if (DynamicObject* dynObj = m_caster->ToUnit()->GetDynObject(m_triggeredByAuraSpell->Id))
                         losTarget = dynObj;
 
-                if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, m_spellInfo->Id, nullptr, SPELL_DISABLE_LOS) && !target->IsWithinLOSInMap(losTarget, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)) && !m_spellInfo->HasAttribute(SPELL_ATTR2_TRIGGERED_CAN_TRIGGER_PROC))
+                if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, m_spellInfo->Id, nullptr, SPELL_DISABLE_LOS) && !target->IsWithinLOSInMap(losTarget, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)) && !m_spellInfo->HasAttribute(SPELL_ATTR2_ACTIVE_THREAT))
                     return SPELL_FAILED_LINE_OF_SIGHT;
             }
         }
@@ -5525,7 +5525,7 @@ SpellCastResult Spell::CheckCast(bool strict, uint32* param1 /*= nullptr*/, uint
         float x, y, z;
         m_targets.GetDstPos()->GetPosition(x, y, z);
 
-        if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, m_spellInfo->Id, nullptr, SPELL_DISABLE_LOS) && !m_caster->IsWithinLOS(x, y, z, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)) && !m_spellInfo->HasAttribute(SPELL_ATTR2_TRIGGERED_CAN_TRIGGER_PROC))
+        if (!m_spellInfo->HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS) && !m_spellInfo->HasAttribute(SPELL_ATTR5_SKIP_CHECKCAST_LOS_CHECK) && !DisableMgr::IsDisabledFor(DISABLE_TYPE_SPELL, m_spellInfo->Id, nullptr, SPELL_DISABLE_LOS) && !m_caster->IsWithinLOS(x, y, z, LINEOFSIGHT_ALL_CHECKS, (sWorld->customGetBoolConfig(CONFIG_CHECK_M2_LOS) ? VMAP::ModelIgnoreFlags::Nothing : VMAP::ModelIgnoreFlags::M2)) && !m_spellInfo->HasAttribute(SPELL_ATTR2_ACTIVE_THREAT))
             return SPELL_FAILED_LINE_OF_SIGHT;
     }
 

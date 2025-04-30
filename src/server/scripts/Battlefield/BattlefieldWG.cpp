@@ -332,7 +332,7 @@ void BattlefieldWG::OnBattleStart()
     UpdateWorkshopsAndGraves();
 
     // TODO check need removeplayer?
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
     {
         if (itr.second->inZone)
             if (Player* player = ObjectAccessor::FindPlayer(itr.first))
@@ -409,7 +409,7 @@ void BattlefieldWG::OnBattleEnd(bool endByTimer)
     for (WintergraspWorkshop* workshop : m_Workshops)
         workshop->Save();
 
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
     {
         if (itr.second->inZone)
             if (Player* player = ObjectAccessor::FindPlayer(itr.first))
@@ -564,7 +564,7 @@ void BattlefieldWG::OnUnitDeath(Unit* unit)
 void BattlefieldWG::HandlePromotion(Player* playerKiller, Unit* unitKilled)
 {
     uint32 teamId = playerKiller->GetTeamId();
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
     {
         if (itr.second->inWar)
         {
@@ -744,7 +744,7 @@ void BattlefieldWG::FillInitialWorldStates(WorldPackets::WorldState::InitWorldSt
 
 void BattlefieldWG::SendInitWorldStatesToAll()
 {
-    for (auto const itr: m_PlayerMap)
+    for (auto itr: m_PlayerMap)
         if (Player* player = ObjectAccessor::FindPlayer(itr.first))
             SendInitWorldStatesTo(player);
 }
@@ -753,7 +753,7 @@ void BattlefieldWG::BrokenWallOrTower(TeamId team, BfWGGameObjectBuilding* build
 {
     if (team == GetDefenderTeam())
     {
-        for (auto const itr: m_PlayerMap)
+        for (auto itr: m_PlayerMap)
             if (itr.second->inWar && itr.second->team == GetAttackerTeam())
                 if (Player* player = ObjectAccessor::FindPlayer(itr.first))
                     if (player->GetDistance2d(ASSERT_NOTNULL(GetGameObject(building->GetGUID()))) < 50.0f)
@@ -771,7 +771,7 @@ void BattlefieldWG::UpdatedDestroyedTowerCount(TeamId team)
         UpdateData(BATTLEFIELD_WG_DATA_DAMAGED_TOWER_ATT, -1);
         UpdateData(BATTLEFIELD_WG_DATA_BROKEN_TOWER_ATT, 1);
 
-        for (auto const itr: m_PlayerMap)
+        for (auto itr: m_PlayerMap)
             if (itr.second->inWar) {
                 // Remove buff stack on attackers
                 if (itr.second->team == GetAttackerTeam()) {
@@ -881,7 +881,7 @@ void BattlefieldWG::UpdateTenacity()
     // Remove old buff
     if (m_tenacityTeam != TEAM_NEUTRAL)
     {
-        for (auto const itr: m_PlayerMap)
+        for (auto itr: m_PlayerMap)
             if (itr.second->team == m_tenacityTeam)
                 if (Player* player = ObjectAccessor::FindPlayer(itr.first))
                     if (player->GetLevel() >= m_MinLevel)
@@ -910,7 +910,7 @@ void BattlefieldWG::UpdateTenacity()
         if (newStack < 5)
             buff_honor = 0;
 
-        for (auto const itr: m_PlayerMap)
+        for (auto itr: m_PlayerMap)
             if (itr.second->inWar && itr.second->team == m_tenacityTeam)
                 if (Player* player = ObjectAccessor::FindPlayer(itr.first))
                 {

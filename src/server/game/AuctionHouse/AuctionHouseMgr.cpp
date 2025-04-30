@@ -623,7 +623,7 @@ void AuctionHouseObject::Update()
 
     // Clear expired throttled players
     std::vector<ObjectGuid> removeVector;
-    for (auto const itr: GetAllThrottleMap)
+    for (auto itr: GetAllThrottleMap)
     {
         if (itr.second <= curTime)
             removeVector.push_back(itr.first);

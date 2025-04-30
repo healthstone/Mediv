@@ -200,7 +200,7 @@ void AditionalData::LearnSpellFromAutoLearnSpells(uint8 level)
         return;
 
     uint8 classid = pPlayer->GetClass();
-    for (auto const itr: sMedivhAdditionalMgr->GetPlayerAutoLearnMap())
+    for (auto itr: sMedivhAdditionalMgr->GetPlayerAutoLearnMap())
     {
         if (PlayerAutoLearn const* pAutoLearn = itr.second) {
             if (pAutoLearn->reqlevel > level)

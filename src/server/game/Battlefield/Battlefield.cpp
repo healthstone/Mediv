@@ -120,7 +120,7 @@ void Battlefield::Update(uint32 diff) {
 
     time_t now = GameTime::GetGameTime();
     std::set<ObjectGuid> _playerkick;
-    for (auto const itr: m_PlayerMap) {
+    for (auto itr: m_PlayerMap) {
         // check estimation time for awaiting war and waiting to kick
         if (itr.second->isWaitingWar || itr.second->isWaitingKick) {
             if (itr.second->time <= now)
