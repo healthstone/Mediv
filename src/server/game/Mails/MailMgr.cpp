@@ -613,7 +613,7 @@ uint32 MailMgr::AddNewMail(uint8 messageType, uint8 stationery, uint16 mailTempl
                            uint32 COD, uint8 checked, uint8 state) {
     // find max id
     uint32 new_id = 0;
-    for (auto const itr: m_mails)
+    for (auto itr: m_mails)
         if (itr.first > new_id)
             new_id = itr.first;
 
@@ -669,7 +669,7 @@ uint32 MailMgr::AddNewMail(uint8 messageType, uint8 stationery, uint16 mailTempl
 
 void MailMgr::RemoveAllMailsFor(ObjectGuid::LowType playerId) {
     std::vector<uint32> mID;
-    for (auto const itr: m_mails) {
+    for (auto itr: m_mails) {
         if (itr.second->receiver == playerId)
             mID.push_back(itr.first);
     }
@@ -709,7 +709,7 @@ void
 MailMgr::AddNewMailItem(uint32 mailID, Item *itemPointer, ObjectGuid::LowType itemGuidLow, ObjectGuid::LowType receiver,
                         CharacterDatabaseTransaction &trans) {
     bool itemexist = false;
-    for (auto const itr: m_mailitems)
+    for (auto itr: m_mailitems)
         if (itr.second->item_guid == itemGuidLow)
             itemexist = true;
 
@@ -722,7 +722,7 @@ MailMgr::AddNewMailItem(uint32 mailID, Item *itemPointer, ObjectGuid::LowType it
 
     // find max id
     uint32 new_id = 0;
-    for (auto const itr: m_mailitems)
+    for (auto itr: m_mailitems)
         if (itr.first > new_id)
             new_id = itr.first;
 
@@ -747,7 +747,7 @@ MailMgr::AddNewMailItem(uint32 mailID, Item *itemPointer, ObjectGuid::LowType it
 
 void MailMgr::RemoveMailItem(ObjectGuid::LowType itemGuidLow, CharacterDatabaseTransaction &trans) {
     uint32 id = 0;
-    for (auto const itr: m_mailitems) {
+    for (auto itr: m_mailitems) {
         if (itr.second->item_guid == itemGuidLow) {
             id = itr.first;
             break;
@@ -767,7 +767,7 @@ void MailMgr::RemoveMailItem(ObjectGuid::LowType itemGuidLow, CharacterDatabaseT
 
 void MailMgr::RemoveMailItemsByMailId(uint32 mailID, CharacterDatabaseTransaction &trans) {
     std::vector<uint32> miID;
-    for (auto const itr: m_mailitems) {
+    for (auto itr: m_mailitems) {
         if (itr.second->messageID == mailID) {
             clearDependInstanceItem(itr.second->receiver_guid, mailID, trans);
             miID.push_back(itr.first);
@@ -798,7 +798,7 @@ uint32 MailMgr::GetUnreadMessagesAndNextDelivertime(ObjectGuid::LowType playerId
     uint32 unread = 0;
     time_t cTime = GameTime::GetGameTime();
 
-    for (auto const itr: m_mails) {
+    for (auto itr: m_mails) {
         if (itr.second->receiver == playerId) {
             if (itr.second->deliver_time > cTime) {
                 if (!delivertime || delivertime > itr.second->deliver_time)
@@ -814,7 +814,7 @@ uint32 MailMgr::GetUnreadMessagesAndNextDelivertime(ObjectGuid::LowType playerId
 uint32 MailMgr::GetMailBoxSize(ObjectGuid::LowType playerId) {
     uint32 mails = 0;
 
-    for (auto const itr: m_mails) {
+    for (auto itr: m_mails) {
         if (itr.second->receiver == playerId)
             ++mails;
     }
@@ -1037,7 +1037,7 @@ MailMgr::HandleMailTakeItem(Player *player, uint32 mailID, ObjectGuid::LowType i
 
             // check on others items in this mail, and set "has_items" = 0 if no
             bool has_items = false;
-            for (auto const itemItr: m_mailitems) {
+            for (auto itemItr: m_mailitems) {
                 if (itemItr.second->messageID == mailID)
                     has_items = true;
             }
@@ -1109,7 +1109,7 @@ void MailMgr::HandleGetMailList(Player *player, WorldPacket &data) {
 
             uint32 mailID = mailItr.first;
             uint8 item_count = 0;
-            for (auto const itemItr: m_mailitems) {
+            for (auto itemItr: m_mailitems) {
                 if (itemItr.second->messageID == mailID)
                     ++item_count;
             }
@@ -1158,7 +1158,7 @@ void MailMgr::HandleGetMailList(Player *player, WorldPacket &data) {
             data << uint8(item_count);                               // client limit is 0x10
 
             uint8 ItemIntex = 0;
-            for (auto const itemItr: m_mailitems) {
+            for (auto itemItr: m_mailitems) {
                 if (itemItr.second->messageID == mailID) {
                     ++ItemIntex;
                     Item *item = GetMItem(itemItr.second->item_guid);
@@ -1258,7 +1258,7 @@ bool MailMgr::HandleQueryNextMailTime(Player *player, WorldPacket &data) {
     time_t now = GameTime::GetGameTime();
     std::set<uint32> sentSenders;
 
-    for (auto const itr: m_mails) {
+    for (auto itr: m_mails) {
         if (itr.second->receiver == player->GetGUID().GetCounter()) {
             // must be not checked yet
             if (itr.second->checked & MAIL_CHECK_MASK_READ)
@@ -1444,7 +1444,7 @@ void MailMgr::_DeleteExpiryMails(bool startServer) {
     std::vector<uint32> mailIds;
     time_t now = GameTime::GetGameTime();
 
-    for (auto const mailItr: m_mails) {
+    for (auto mailItr: m_mails) {
         if (mailItr.second->expire_time <= now) {
             mailIds.push_back(mailItr.first);
 
@@ -1473,7 +1473,7 @@ void MailMgr::_DeleteExpiryMails(bool startServer) {
 time_t MailMgr::GetNextExpireMailUpd() {
     time_t nextExpiry = GameTime::GetGameTime() + (12 * HOUR);
 
-    for (auto const mailItr: m_mails) {
+    for (auto mailItr: m_mails) {
         if (mailItr.second->expire_time < nextExpiry)
             nextExpiry = mailItr.second->expire_time;
     }

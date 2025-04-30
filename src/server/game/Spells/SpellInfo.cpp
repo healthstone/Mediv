@@ -405,7 +405,7 @@ bool SpellEffectInfo::IsAura() const
 
 bool SpellEffectInfo::IsAura(AuraType aura) const
 {
-    return IsAura() && ApplyAuraName == uint32(aura);
+    return IsAura() && ApplyAuraName == aura;
 }
 
 bool SpellEffectInfo::IsTargetingArea() const
@@ -1130,7 +1130,7 @@ bool SpellInfo::IsShadowMeld() const
            && HasAttribute(SPELL_ATTR2_CAN_TARGET_NOT_IN_LOS)
            && HasAttribute(SPELL_ATTR2_NOT_NEED_SHAPESHIFT)
            && HasAttribute(SPELL_ATTR2_FAIL_ON_ALL_TARGETS_IMMUNE)
-           && HasAttribute(SPELL_ATTR3_CAN_PROC_WITH_TRIGGERED);
+           && HasAttribute(SPELL_ATTR3_CAN_PROC_FROM_PROCS);
 }
 
 bool SpellInfo::IsPassive() const
@@ -1160,23 +1160,23 @@ bool SpellInfo::IsStackableWithRanks() const
         return false;
 
     // All stance spells. if any better way, change it.
-    for (SpellEffectInfo const& effect : GetEffects())
+    switch (SpellFamilyName)
     {
-        switch (SpellFamilyName)
-        {
-            case SPELLFAMILY_PALADIN:
-                // Paladin aura Spell
-                if (effect.Effect == SPELL_EFFECT_APPLY_AREA_AURA_RAID)
-                    return false;
-                break;
-            case SPELLFAMILY_DRUID:
-                // Druid form Spell
-                if (effect.Effect == SPELL_EFFECT_APPLY_AURA &&
-                    effect.ApplyAuraName == SPELL_AURA_MOD_SHAPESHIFT)
-                    return false;
-                break;
-        }
+        case SPELLFAMILY_PALADIN:
+            // Paladin aura Spell
+            if (HasEffect(SPELL_EFFECT_APPLY_AREA_AURA_RAID))
+                return false;
+            // Seal of Righteousness
+            if (SpellFamilyFlags[1] & 0x20000000)
+                return false;
+            break;
+        case SPELLFAMILY_DRUID:
+            // Druid form Spell
+            if (HasAura(SPELL_AURA_MOD_SHAPESHIFT))
+                return false;
+            break;
     }
+
     return true;
 }
 

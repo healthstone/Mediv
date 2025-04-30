@@ -189,7 +189,7 @@ class TC_GAME_API AuctionHouseMgr
         static void SendAuctionSuccessfulMail(AuctionEntry* auction);
         void SendAuctionExpiredMail(AuctionEntry* auction, CharacterDatabaseTransaction trans);
         static void SendAuctionOutbiddedMail(AuctionEntry* auction, uint32 newPrice, Player* newBidder);
-        static void SendAuctionCancelledToBidderMail(AuctionEntry* auction);
+        void SendAuctionCancelledToBidderMail(AuctionEntry* auction, Item* item);
 
         static uint32 GetAuctionDeposit(AuctionHouseEntry const* entry, uint32 time, Item* pItem, uint32 count);
         static AuctionHouseEntry const* GetAuctionHouseEntry(uint32 factionTemplateId);

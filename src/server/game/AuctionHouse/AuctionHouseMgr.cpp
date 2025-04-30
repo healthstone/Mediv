@@ -285,7 +285,7 @@ void AuctionHouseMgr::SendAuctionOutbiddedMail(AuctionEntry* auction, uint32 new
 }
 
 //this function sends mail, when auction is cancelled to old bidder
-void AuctionHouseMgr::SendAuctionCancelledToBidderMail(AuctionEntry* auction)
+void AuctionHouseMgr::SendAuctionCancelledToBidderMail(AuctionEntry* auction, Item* item)
 {
     ObjectGuid bidder_guid = ObjectGuid(HighGuid::Player, auction->bidder);
     Player* bidder = ObjectAccessor::FindConnectedPlayer(bidder_guid);
@@ -293,6 +293,9 @@ void AuctionHouseMgr::SendAuctionCancelledToBidderMail(AuctionEntry* auction)
     uint32 bidder_accId = 0;
     if (!bidder)
         bidder_accId = sCharacterCache->GetCharacterAccountIdByGuid(bidder_guid);
+
+    if (bidder)
+        bidder->GetSession()->SendAuctionRemovedNotification(auction->Id, auction->itemEntry, item->GetItemRandomPropertyId());
 
     // bidder exist
     if ((bidder || bidder_accId) && !sAuctionBotConfig->IsBotChar(auction->bidder))
@@ -620,7 +623,7 @@ void AuctionHouseObject::Update()
 
     // Clear expired throttled players
     std::vector<ObjectGuid> removeVector;
-    for (auto const itr: GetAllThrottleMap)
+    for (auto itr: GetAllThrottleMap)
     {
         if (itr.second <= curTime)
             removeVector.push_back(itr.first);
