@@ -656,7 +656,7 @@ void WorldSession::HandleAuctionRemoveItem(WorldPacket& recvData)
                 if (!player->HasEnoughMoney(auctionCut))          //player doesn't have enough money, maybe message needed
                     return;
                 //some auctionBidderNotification would be needed, but don't know that parts..
-                sAuctionMgr->SendAuctionCancelledToBidderMail(auction);
+                sAuctionMgr->SendAuctionCancelledToBidderMail(auction, pItem);
                 player->ModifyMoney(-int32(auctionCut));
             }
 
